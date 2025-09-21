@@ -1,0 +1,34 @@
+{
+  "name": "core",
+  "type": "module",
+  "main": "build/node/luxon.js",
+  "module": "build/es6/luxon.js",
+  "types": "build/types/luxon.d.ts",
+  "browser": "build/cjs-browser/luxon.js",
+  "jsdelivr": "build/global/luxon.min.js",
+  "unpkg": "build/global/luxon.min.js",
+  "exports": {
+    ".": {
+      "import": "./build/es6/luxon.mjs",
+      "require": "./build/node/luxon.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "prebuild": "rm -rf ./build",
+    "build:types": "tsc --build",
+    "build:js": "rollup -c",
+    "build": "yarn build:types && yarn build:js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "rollup": "^4.52.0",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.9.2"
+  }
+}

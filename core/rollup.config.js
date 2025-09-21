@@ -14,7 +14,7 @@ const plugins = [
     commonjs()
 ];
 
-const input = 'src/luxon.js';
+const input = 'src/luxon.js';  
 
 export default [
     // Built node (CommonJS for Node.js)
