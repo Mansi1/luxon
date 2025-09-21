@@ -18,17 +18,23 @@
     "prebuild": "rm -rf ./build",
     "build:types": "tsc --build",
     "build:js": "rollup -c",
-    "build": "yarn build:types && yarn build:js"
+    "build": "yarn build:types && yarn build:js",
+    "test": "jest"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
+    "@jest/globals": "^30.1.2",
     "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-node-resolve": "^16.0.1",
+    "@types/babel__preset-env": "^7",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.1.3",
     "rollup": "^4.52.0",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.36.0",
+    "ts-jest": "^29.4.4",
     "typescript": "^5.9.2"
   }
 }
