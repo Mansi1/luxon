@@ -55,6 +55,7 @@
   },
   "main": "build/node/luxon.js",
   "module": "build/es6/luxon.js",
+  "types": "build/types/luxon.d.ts",
   "browser": "build/cjs-browser/luxon.js",
   "jsdelivr": "build/global/luxon.min.js",
   "unpkg": "build/global/luxon.min.js",
