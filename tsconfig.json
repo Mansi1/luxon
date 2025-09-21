@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "esnext", // Use the latest ECMAScript features
+    "module": "esnext", // Use ES Modules for the source code
+    "allowJs": true, // **Erlaubt JavaScript-Dateien im Projekt**
+    "checkJs": false, // **Führt eine Typüberprüfung für JavaScript-Dateien durch**
+    "strict": false, // Enable all strict type-checking options
+    "esModuleInterop": true, // Allows default imports from modules with no default export
+    "skipLibCheck": true, // Skips type checking of declaration files
+    "declaration": true, // Key setting: generates .d.ts files
+    "declarationMap": true, // To generate .d.ts.map files
+    "emitDeclarationOnly": true,
+    "outDir": "./build/types", // Output directory for the .d.ts files
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}

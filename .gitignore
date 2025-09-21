@@ -8,4 +8,5 @@ coverage/
 .external-ecmascript.js
 .idea
 .vscode
+.yarn
 test/scratch.test.js
