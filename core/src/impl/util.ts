@@ -4,52 +4,55 @@
   it up into, say, parsingUtil.js and basicUtil.js and so on. But they are divided up by feature area.
 */
 
-import { InvalidArgumentError } from "../errors.js";
-import Settings from "../settings.js";
-import { dayOfWeek, isoWeekdayToLocal } from "./conversions.js";
+import { InvalidArgumentError } from '../errors.js';
+import Settings from '../settings.js';
+import { dayOfWeek, isoWeekdayToLocal } from './conversions.js';
 
 /**
  * @private
  */
 
-// TYPES
+export type integer = number & { __type: 'integer' };
 
-export function isUndefined(o) {
-  return typeof o === "undefined";
+export function isUndefined(o: unknown): o is undefined {
+  return typeof o === 'undefined';
 }
 
-export function isNumber(o) {
-  return typeof o === "number";
+export function isNull(o: unknown): o is null {
+  return typeof o === null;
+}
+export function isNumber(o: unknown): o is number {
+  return typeof o === 'number';
 }
 
-export function isInteger(o) {
-  return typeof o === "number" && o % 1 === 0;
+export function isInteger(o: unknown): o is integer {
+  return typeof o === 'number' && o % 1 === 0;
 }
 
-export function isString(o) {
-  return typeof o === "string";
+export function isString(o: unknown): o is string {
+  return typeof o === 'string';
 }
 
-export function isDate(o) {
-  return Object.prototype.toString.call(o) === "[object Date]";
+export function isDate(o: unknown): o is Date {
+  return Object.prototype.toString.call(o) === '[object Date]';
 }
 
 // CAPABILITIES
 
-export function hasRelative() {
+export function hasRelative(): boolean {
   try {
-    return typeof Intl !== "undefined" && !!Intl.RelativeTimeFormat;
+    return typeof Intl !== 'undefined' && !!Intl.RelativeTimeFormat;
   } catch (e) {
     return false;
   }
 }
 
-export function hasLocaleWeekInfo() {
+export function hasLocaleWeekInfo(): boolean {
   try {
     return (
-      typeof Intl !== "undefined" &&
+      typeof Intl !== 'undefined' &&
       !!Intl.Locale &&
-      ("weekInfo" in Intl.Locale.prototype || "getWeekInfo" in Intl.Locale.prototype)
+      ('weekInfo' in Intl.Locale.prototype || 'getWeekInfo' in Intl.Locale.prototype)
     );
   } catch (e) {
     return false;
@@ -92,8 +95,8 @@ export function hasOwnProperty(obj, prop) {
 export function validateWeekSettings(settings) {
   if (settings == null) {
     return null;
-  } else if (typeof settings !== "object") {
-    throw new InvalidArgumentError("Week settings must be an object");
+  } else if (typeof settings !== 'object') {
+    throw new InvalidArgumentError('Week settings must be an object');
   } else {
     if (
       !integerBetween(settings.firstDay, 1, 7) ||
@@ -101,7 +104,7 @@ export function validateWeekSettings(settings) {
       !Array.isArray(settings.weekend) ||
       settings.weekend.some((v) => !integerBetween(v, 1, 7))
     ) {
-      throw new InvalidArgumentError("Invalid week settings");
+      throw new InvalidArgumentError('Invalid week settings');
     }
     return {
       firstDay: settings.firstDay,
@@ -126,15 +129,15 @@ export function padStart(input, n = 2) {
   const isNeg = input < 0;
   let padded;
   if (isNeg) {
-    padded = "-" + ("" + -input).padStart(n, "0");
+    padded = '-' + ('' + -input).padStart(n, '0');
   } else {
-    padded = ("" + input).padStart(n, "0");
+    padded = ('' + input).padStart(n, '0');
   }
   return padded;
 }
 
 export function parseInteger(string) {
-  if (isUndefined(string) || string === null || string === "") {
+  if (isUndefined(string) || string === null || string === '') {
     return undefined;
   } else {
     return parseInt(string, 10);
@@ -142,7 +145,7 @@ export function parseInteger(string) {
 }
 
 export function parseFloating(string) {
-  if (isUndefined(string) || string === null || string === "") {
+  if (isUndefined(string) || string === null || string === '') {
     return undefined;
   } else {
     return parseFloat(string);
@@ -151,28 +154,26 @@ export function parseFloating(string) {
 
 export function parseMillis(fraction) {
   // Return undefined (instead of 0) in these cases, where fraction is not set
-  if (isUndefined(fraction) || fraction === null || fraction === "") {
+  if (isUndefined(fraction) || fraction === null || fraction === '') {
     return undefined;
   } else {
-    const f = parseFloat("0." + fraction) * 1000;
+    const f = parseFloat('0.' + fraction) * 1000;
     return Math.floor(f);
   }
 }
 
-export function roundTo(number, digits, rounding = "round") {
+export function roundTo(number, digits, rounding = 'round') {
   const factor = 10 ** digits;
   switch (rounding) {
-    case "expand":
-      return number > 0
-        ? Math.ceil(number * factor) / factor
-        : Math.floor(number * factor) / factor;
-    case "trunc":
+    case 'expand':
+      return number > 0 ? Math.ceil(number * factor) / factor : Math.floor(number * factor) / factor;
+    case 'trunc':
       return Math.trunc(number * factor) / factor;
-    case "round":
+    case 'round':
       return Math.round(number * factor) / factor;
-    case "floor":
+    case 'floor':
       return Math.floor(number * factor) / factor;
-    case "ceil":
+    case 'ceil':
       return Math.ceil(number * factor) / factor;
     default:
       throw new RangeError(`Value rounding ${rounding} is out of range`);
@@ -202,15 +203,7 @@ export function daysInMonth(year, month) {
 
 // convert a calendar object to a local timestamp (epoch, but with the offset baked in)
 export function objToLocalTS(obj) {
-  let d = Date.UTC(
-    obj.year,
-    obj.month - 1,
-    obj.day,
-    obj.hour,
-    obj.minute,
-    obj.second,
-    obj.millisecond
-  );
+  let d = Date.UTC(obj.year, obj.month - 1, obj.day, obj.hour, obj.minute, obj.second, obj.millisecond);
 
   // for legacy reasons, years between 0 and 99 are interpreted as 19XX; revert that
   if (obj.year < 100 && obj.year >= 0) {
@@ -245,13 +238,13 @@ export function untruncateYear(year) {
 
 export function parseZoneInfo(ts, offsetFormat, locale, timeZone = null) {
   const date = new Date(ts),
-    intlOpts = {
-      hourCycle: "h23",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+    intlOpts: Intl.DateTimeFormatOptions = {
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     };
 
   if (timeZone) {
@@ -262,7 +255,7 @@ export function parseZoneInfo(ts, offsetFormat, locale, timeZone = null) {
 
   const parsed = new Intl.DateTimeFormat(locale, modified)
     .formatToParts(date)
-    .find((m) => m.type.toLowerCase() === "timezonename");
+    .find((m) => m.type.toLowerCase() === 'timezonename');
   return parsed ? parsed.value : null;
 }
 
@@ -284,7 +277,7 @@ export function signedOffset(offHourStr, offMinuteStr) {
 
 export function asNumber(value) {
   const numericValue = Number(value);
-  if (typeof value === "boolean" || value === "" || !Number.isFinite(numericValue))
+  if (typeof value === 'boolean' || value === '' || !Number.isFinite(numericValue))
     throw new InvalidArgumentError(`Invalid unit value ${value}`);
   return numericValue;
 }
@@ -311,14 +304,14 @@ export function normalizeObject(obj, normalizer) {
 export function formatOffset(offset, format) {
   const hours = Math.trunc(Math.abs(offset / 60)),
     minutes = Math.trunc(Math.abs(offset % 60)),
-    sign = offset >= 0 ? "+" : "-";
+    sign = offset >= 0 ? '+' : '-';
 
   switch (format) {
-    case "short":
+    case 'short':
       return `${sign}${padStart(hours, 2)}:${padStart(minutes, 2)}`;
-    case "narrow":
-      return `${sign}${hours}${minutes > 0 ? `:${minutes}` : ""}`;
-    case "techie":
+    case 'narrow':
+      return `${sign}${hours}${minutes > 0 ? `:${minutes}` : ''}`;
+    case 'techie':
       return `${sign}${padStart(hours, 2)}${padStart(minutes, 2)}`;
     default:
       throw new RangeError(`Value format ${format} is out of range for property format`);
@@ -326,5 +319,5 @@ export function formatOffset(offset, format) {
 }
 
 export function timeObject(obj) {
-  return pick(obj, ["hour", "minute", "second", "millisecond"]);
+  return pick(obj, ['hour', 'minute', 'second', 'millisecond']);
 }

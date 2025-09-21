@@ -1,5 +1,5 @@
-import { formatOffset, signedOffset } from "../impl/util.js";
-import Zone from "../zone.js";
+import { formatOffset, signedOffset } from '../impl/util.js';
+import Zone from '../zone.js';
 
 let singleton = null;
 
@@ -46,6 +46,8 @@ export default class FixedOffsetZone extends Zone {
     return null;
   }
 
+  private fixed: number;
+
   constructor(offset) {
     super();
     /** @private **/
@@ -58,7 +60,7 @@ export default class FixedOffsetZone extends Zone {
    * @type {string}
    */
   get type() {
-    return "fixed";
+    return 'fixed';
   }
 
   /**
@@ -68,7 +70,7 @@ export default class FixedOffsetZone extends Zone {
    * @type {string}
    */
   get name() {
-    return this.fixed === 0 ? "UTC" : `UTC${formatOffset(this.fixed, "narrow")}`;
+    return this.fixed === 0 ? 'UTC' : `UTC${formatOffset(this.fixed, 'narrow')}`;
   }
 
   /**
@@ -79,9 +81,9 @@ export default class FixedOffsetZone extends Zone {
    */
   get ianaName() {
     if (this.fixed === 0) {
-      return "Etc/UTC";
+      return 'Etc/UTC';
     } else {
-      return `Etc/GMT${formatOffset(-this.fixed, "narrow")}`;
+      return `Etc/GMT${formatOffset(-this.fixed, 'narrow')}`;
     }
   }
 
@@ -135,7 +137,7 @@ export default class FixedOffsetZone extends Zone {
    * @return {boolean}
    */
   equals(otherZone) {
-    return otherZone.type === "fixed" && otherZone.fixed === this.fixed;
+    return otherZone.type === 'fixed' && otherZone.fixed === this.fixed;
   }
 
   /**

@@ -1,14 +1,14 @@
-import SystemZone from "./zones/systemZone.js";
-import IANAZone from "./zones/IANAZone.js";
-import Locale from "./impl/locale.js";
-import DateTime from "./datetime.js";
+import SystemZone from './zones/systemZone.js';
+import IANAZone from './zones/IANAZone.js';
+import Locale from './impl/locale.js';
+import DateTime from './datetime.js';
 
-import { normalizeZone } from "./impl/zoneUtil.js";
-import { validateWeekSettings } from "./impl/util.js";
-import { resetDigitRegexCache } from "./impl/digits.js";
+import { normalizeZone } from './impl/zoneUtil.js';
+import { validateWeekSettings } from './impl/util.js';
+import { resetDigitRegexCache } from './impl/digits.js';
 
 let now = () => Date.now(),
-  defaultZone = "system",
+  defaultZone = 'system',
   defaultLocale = null,
   defaultNumberingSystem = null,
   defaultOutputCalendar = null,

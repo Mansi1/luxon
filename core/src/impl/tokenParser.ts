@@ -1,12 +1,13 @@
-import { parseMillis, isUndefined, untruncateYear, signedOffset, hasOwnProperty } from "./util.js";
-import Formatter from "./formatter.js";
-import FixedOffsetZone from "../zones/fixedOffsetZone.js";
-import IANAZone from "../zones/IANAZone.js";
-import DateTime from "../datetime.js";
-import { digitRegex, parseDigits } from "./digits.js";
-import { ConflictingSpecificationError } from "../errors.js";
+import { parseMillis, isUndefined, untruncateYear, signedOffset, hasOwnProperty } from './util.js';
+import Formatter from './formatter.js';
+import FixedOffsetZone from '../zones/fixedOffsetZone.js';
+import IANAZone from '../zones/IANAZone.js';
+import DateTime from '../datetime.js';
+import { digitRegex, parseDigits } from './digits.js';
+import { ConflictingSpecificationError } from '../errors.js';
+import Locale from './locale.js';
 
-const MISSING_FTP = "missing Intl.DateTimeFormat.formatToParts support";
+const MISSING_FTP = 'missing Intl.DateTimeFormat.formatToParts support';
 
 function intUnit(regex, post = (i) => i) {
   return { regex, deser: ([s]) => post(parseDigits(s)) };
@@ -14,18 +15,18 @@ function intUnit(regex, post = (i) => i) {
 
 const NBSP = String.fromCharCode(160);
 const spaceOrNBSP = `[ ${NBSP}]`;
-const spaceOrNBSPRegExp = new RegExp(spaceOrNBSP, "g");
+const spaceOrNBSPRegExp = new RegExp(spaceOrNBSP, 'g');
 
 function fixListRegex(s) {
   // make dots optional and also make them literal
   // make space and non breakable space characters interchangeable
-  return s.replace(/\./g, "\\.?").replace(spaceOrNBSPRegExp, spaceOrNBSP);
+  return s.replace(/\./g, '\\.?').replace(spaceOrNBSPRegExp, spaceOrNBSP);
 }
 
 function stripInsensitivities(s) {
   return s
-    .replace(/\./g, "") // ignore dots that were made optional
-    .replace(spaceOrNBSPRegExp, " ") // interchange space and nbsp
+    .replace(/\./g, '') // ignore dots that were made optional
+    .replace(spaceOrNBSPRegExp, ' ') // interchange space and nbsp
     .toLowerCase();
 }
 
@@ -34,9 +35,8 @@ function oneOf(strings, startIndex) {
     return null;
   } else {
     return {
-      regex: RegExp(strings.map(fixListRegex).join("|")),
-      deser: ([s]) =>
-        strings.findIndex((i) => stripInsensitivities(s) === stripInsensitivities(i)) + startIndex,
+      regex: RegExp(strings.map(fixListRegex).join('|')),
+      deser: ([s]) => strings.findIndex((i) => stripInsensitivities(s) === stripInsensitivities(i)) + startIndex,
     };
   }
 }
@@ -50,25 +50,25 @@ function simple(regex) {
 }
 
 function escapeToken(value) {
-  return value.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&");
+  return value.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, '\\$&');
 }
 
 /**
  * @param token
  * @param {Locale} loc
  */
-function unitForToken(token, loc) {
+function unitForToken(token, loc: Locale) {
   const one = digitRegex(loc),
-    two = digitRegex(loc, "{2}"),
-    three = digitRegex(loc, "{3}"),
-    four = digitRegex(loc, "{4}"),
-    six = digitRegex(loc, "{6}"),
-    oneOrTwo = digitRegex(loc, "{1,2}"),
-    oneToThree = digitRegex(loc, "{1,3}"),
-    oneToSix = digitRegex(loc, "{1,6}"),
-    oneToNine = digitRegex(loc, "{1,9}"),
-    twoToFour = digitRegex(loc, "{2,4}"),
-    fourToSix = digitRegex(loc, "{4,6}"),
+    two = digitRegex(loc, '{2}'),
+    three = digitRegex(loc, '{3}'),
+    four = digitRegex(loc, '{4}'),
+    six = digitRegex(loc, '{6}'),
+    oneOrTwo = digitRegex(loc, '{1,2}'),
+    oneToThree = digitRegex(loc, '{1,3}'),
+    oneToSix = digitRegex(loc, '{1,6}'),
+    oneToNine = digitRegex(loc, '{1,9}'),
+    twoToFour = digitRegex(loc, '{2,4}'),
+    fourToSix = digitRegex(loc, '{4,6}'),
     literal = (t) => ({ regex: RegExp(escapeToken(t.val)), deser: ([s]) => s, literal: true }),
     unitate = (t) => {
       if (token.literal) {
@@ -76,117 +76,117 @@ function unitForToken(token, loc) {
       }
       switch (t.val) {
         // era
-        case "G":
-          return oneOf(loc.eras("short"), 0);
-        case "GG":
-          return oneOf(loc.eras("long"), 0);
+        case 'G':
+          return oneOf(loc.eras('short'), 0);
+        case 'GG':
+          return oneOf(loc.eras('long'), 0);
         // years
-        case "y":
+        case 'y':
           return intUnit(oneToSix);
-        case "yy":
+        case 'yy':
           return intUnit(twoToFour, untruncateYear);
-        case "yyyy":
+        case 'yyyy':
           return intUnit(four);
-        case "yyyyy":
+        case 'yyyyy':
           return intUnit(fourToSix);
-        case "yyyyyy":
+        case 'yyyyyy':
           return intUnit(six);
         // months
-        case "M":
+        case 'M':
           return intUnit(oneOrTwo);
-        case "MM":
+        case 'MM':
           return intUnit(two);
-        case "MMM":
-          return oneOf(loc.months("short", true), 1);
-        case "MMMM":
-          return oneOf(loc.months("long", true), 1);
-        case "L":
+        case 'MMM':
+          return oneOf(loc.months('short', true), 1);
+        case 'MMMM':
+          return oneOf(loc.months('long', true), 1);
+        case 'L':
           return intUnit(oneOrTwo);
-        case "LL":
+        case 'LL':
           return intUnit(two);
-        case "LLL":
-          return oneOf(loc.months("short", false), 1);
-        case "LLLL":
-          return oneOf(loc.months("long", false), 1);
+        case 'LLL':
+          return oneOf(loc.months('short', false), 1);
+        case 'LLLL':
+          return oneOf(loc.months('long', false), 1);
         // dates
-        case "d":
+        case 'd':
           return intUnit(oneOrTwo);
-        case "dd":
+        case 'dd':
           return intUnit(two);
         // ordinals
-        case "o":
+        case 'o':
           return intUnit(oneToThree);
-        case "ooo":
+        case 'ooo':
           return intUnit(three);
         // time
-        case "HH":
+        case 'HH':
           return intUnit(two);
-        case "H":
+        case 'H':
           return intUnit(oneOrTwo);
-        case "hh":
+        case 'hh':
           return intUnit(two);
-        case "h":
+        case 'h':
           return intUnit(oneOrTwo);
-        case "mm":
+        case 'mm':
           return intUnit(two);
-        case "m":
+        case 'm':
           return intUnit(oneOrTwo);
-        case "q":
+        case 'q':
           return intUnit(oneOrTwo);
-        case "qq":
+        case 'qq':
           return intUnit(two);
-        case "s":
+        case 's':
           return intUnit(oneOrTwo);
-        case "ss":
+        case 'ss':
           return intUnit(two);
-        case "S":
+        case 'S':
           return intUnit(oneToThree);
-        case "SSS":
+        case 'SSS':
           return intUnit(three);
-        case "u":
+        case 'u':
           return simple(oneToNine);
-        case "uu":
+        case 'uu':
           return simple(oneOrTwo);
-        case "uuu":
+        case 'uuu':
           return intUnit(one);
         // meridiem
-        case "a":
+        case 'a':
           return oneOf(loc.meridiems(), 0);
         // weekYear (k)
-        case "kkkk":
+        case 'kkkk':
           return intUnit(four);
-        case "kk":
+        case 'kk':
           return intUnit(twoToFour, untruncateYear);
         // weekNumber (W)
-        case "W":
+        case 'W':
           return intUnit(oneOrTwo);
-        case "WW":
+        case 'WW':
           return intUnit(two);
         // weekdays
-        case "E":
-        case "c":
+        case 'E':
+        case 'c':
           return intUnit(one);
-        case "EEE":
-          return oneOf(loc.weekdays("short", false), 1);
-        case "EEEE":
-          return oneOf(loc.weekdays("long", false), 1);
-        case "ccc":
-          return oneOf(loc.weekdays("short", true), 1);
-        case "cccc":
-          return oneOf(loc.weekdays("long", true), 1);
+        case 'EEE':
+          return oneOf(loc.weekdays('short', false), 1);
+        case 'EEEE':
+          return oneOf(loc.weekdays('long', false), 1);
+        case 'ccc':
+          return oneOf(loc.weekdays('short', true), 1);
+        case 'cccc':
+          return oneOf(loc.weekdays('long', true), 1);
         // offset/zone
-        case "Z":
-        case "ZZ":
+        case 'Z':
+        case 'ZZ':
           return offset(new RegExp(`([+-]${oneOrTwo.source})(?::(${two.source}))?`), 2);
-        case "ZZZ":
+        case 'ZZZ':
           return offset(new RegExp(`([+-]${oneOrTwo.source})(${two.source})?`), 2);
         // we don't support ZZZZ (PST) or ZZZZZ (Pacific Standard Time) in parsing
         // because we don't have any way to figure out what they are
-        case "z":
+        case 'z':
           return simple(/[a-z_+-/]{1,256}?/i);
         // this special-case "token" represents a place where a macro-token expanded into a white-space literal
         // in this case we accept any non-newline white-space
-        case " ":
+        case ' ':
           return simple(/[^\S\n\r]/);
         default:
           return literal(t);
@@ -204,55 +204,55 @@ function unitForToken(token, loc) {
 
 const partTypeStyleToTokenVal = {
   year: {
-    "2-digit": "yy",
-    numeric: "yyyyy",
+    '2-digit': 'yy',
+    numeric: 'yyyyy',
   },
   month: {
-    numeric: "M",
-    "2-digit": "MM",
-    short: "MMM",
-    long: "MMMM",
+    numeric: 'M',
+    '2-digit': 'MM',
+    short: 'MMM',
+    long: 'MMMM',
   },
   day: {
-    numeric: "d",
-    "2-digit": "dd",
+    numeric: 'd',
+    '2-digit': 'dd',
   },
   weekday: {
-    short: "EEE",
-    long: "EEEE",
+    short: 'EEE',
+    long: 'EEEE',
   },
-  dayperiod: "a",
-  dayPeriod: "a",
+  dayperiod: 'a',
+  dayPeriod: 'a',
   hour12: {
-    numeric: "h",
-    "2-digit": "hh",
+    numeric: 'h',
+    '2-digit': 'hh',
   },
   hour24: {
-    numeric: "H",
-    "2-digit": "HH",
+    numeric: 'H',
+    '2-digit': 'HH',
   },
   minute: {
-    numeric: "m",
-    "2-digit": "mm",
+    numeric: 'm',
+    '2-digit': 'mm',
   },
   second: {
-    numeric: "s",
-    "2-digit": "ss",
+    numeric: 's',
+    '2-digit': 'ss',
   },
   timeZoneName: {
-    long: "ZZZZZ",
-    short: "ZZZ",
+    long: 'ZZZZZ',
+    short: 'ZZZ',
   },
 };
 
 function tokenForPart(part, formatOpts, resolvedOpts) {
   const { type, value } = part;
 
-  if (type === "literal") {
+  if (type === 'literal') {
     const isSpace = /^\s+$/.test(value);
     return {
       literal: !isSpace,
-      val: isSpace ? " " : value,
+      val: isSpace ? ' ' : value,
     };
   }
 
@@ -262,23 +262,23 @@ function tokenForPart(part, formatOpts, resolvedOpts) {
   // if so, respect their decision
   // if not, refer back to the resolvedOpts, which are based on the locale
   let actualType = type;
-  if (type === "hour") {
+  if (type === 'hour') {
     if (formatOpts.hour12 != null) {
-      actualType = formatOpts.hour12 ? "hour12" : "hour24";
+      actualType = formatOpts.hour12 ? 'hour12' : 'hour24';
     } else if (formatOpts.hourCycle != null) {
-      if (formatOpts.hourCycle === "h11" || formatOpts.hourCycle === "h12") {
-        actualType = "hour12";
+      if (formatOpts.hourCycle === 'h11' || formatOpts.hourCycle === 'h12') {
+        actualType = 'hour12';
       } else {
-        actualType = "hour24";
+        actualType = 'hour24';
       }
     } else {
       // tokens only differentiate between 24 hours or not,
       // so we do not need to check hourCycle here, which is less supported anyways
-      actualType = resolvedOpts.hour12 ? "hour12" : "hour24";
+      actualType = resolvedOpts.hour12 ? 'hour12' : 'hour24';
     }
   }
   let val = partTypeStyleToTokenVal[actualType];
-  if (typeof val === "object") {
+  if (typeof val === 'object') {
     val = val[style];
   }
 
@@ -293,7 +293,7 @@ function tokenForPart(part, formatOpts, resolvedOpts) {
 }
 
 function buildRegex(units) {
-  const re = units.map((u) => u.regex).reduce((f, r) => `${f}(${r.source})`, "");
+  const re = units.map((u) => u.regex).reduce((f, r) => `${f}(${r.source})`, '');
   return [`^${re}$`, units];
 }
 
@@ -322,33 +322,33 @@ function match(input, regex, handlers) {
 function dateTimeFromMatches(matches) {
   const toField = (token) => {
     switch (token) {
-      case "S":
-        return "millisecond";
-      case "s":
-        return "second";
-      case "m":
-        return "minute";
-      case "h":
-      case "H":
-        return "hour";
-      case "d":
-        return "day";
-      case "o":
-        return "ordinal";
-      case "L":
-      case "M":
-        return "month";
-      case "y":
-        return "year";
-      case "E":
-      case "c":
-        return "weekday";
-      case "W":
-        return "weekNumber";
-      case "k":
-        return "weekYear";
-      case "q":
-        return "quarter";
+      case 'S':
+        return 'millisecond';
+      case 's':
+        return 'second';
+      case 'm':
+        return 'minute';
+      case 'h':
+      case 'H':
+        return 'hour';
+      case 'd':
+        return 'day';
+      case 'o':
+        return 'ordinal';
+      case 'L':
+      case 'M':
+        return 'month';
+      case 'y':
+        return 'year';
+      case 'E':
+      case 'c':
+        return 'weekday';
+      case 'W':
+        return 'weekNumber';
+      case 'k':
+        return 'weekYear';
+      case 'q':
+        return 'quarter';
       default:
         return null;
     }
@@ -442,7 +442,7 @@ export class TokenParser {
 
     if (!this.disqualifyingUnit) {
       const [regexString, handlers] = buildRegex(this.units);
-      this.regex = RegExp(regexString, "i");
+      this.regex = RegExp(regexString, 'i');
       this.handlers = handlers;
     }
   }
@@ -452,13 +452,9 @@ export class TokenParser {
       return { input, tokens: this.tokens, invalidReason: this.invalidReason };
     } else {
       const [rawMatches, matches] = match(input, this.regex, this.handlers),
-        [result, zone, specificOffset] = matches
-          ? dateTimeFromMatches(matches)
-          : [null, null, undefined];
-      if (hasOwnProperty(matches, "a") && hasOwnProperty(matches, "H")) {
-        throw new ConflictingSpecificationError(
-          "Can't include meridiem when specifying 24-hour format"
-        );
+        [result, zone, specificOffset] = matches ? dateTimeFromMatches(matches) : [null, null, undefined];
+      if (hasOwnProperty(matches, 'a') && hasOwnProperty(matches, 'H')) {
+        throw new ConflictingSpecificationError("Can't include meridiem when specifying 24-hour format");
       }
       return {
         input,

@@ -1,19 +1,17 @@
-import Zone from "../zone.js";
+import Zone from '../zone.js';
 
 /**
  * A zone that failed to parse. You should never need to instantiate this.
  * @implements {Zone}
  */
 export default class InvalidZone extends Zone {
-  constructor(zoneName) {
+  constructor(private zoneName: string) {
     super();
-    /**  @private */
-    this.zoneName = zoneName;
   }
 
   /** @override **/
   get type() {
-    return "invalid";
+    return 'invalid';
   }
 
   /** @override **/
@@ -33,7 +31,7 @@ export default class InvalidZone extends Zone {
 
   /** @override **/
   formatOffset() {
-    return "";
+    return '';
   }
 
   /** @override **/
