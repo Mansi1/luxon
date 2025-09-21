@@ -1,8 +1,5 @@
 export default class Invalid {
-  constructor(reason, explanation) {
-    this.reason = reason;
-    this.explanation = explanation;
-  }
+  constructor(private reason: string, private explanation?: string) {}
 
   toMessage() {
     if (this.explanation) {
