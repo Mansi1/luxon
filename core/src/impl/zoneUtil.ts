@@ -34,7 +34,6 @@ export const normalizeZone = (input: Zone | string | undefined, defaultZone: Zon
     return input;
   }
 
-  //@ts-expect-error fixme that should be not possible
   if (typeof input === 'object' && 'offset' in input && typeof input.offset === 'function') {
     // This is dumb, but the instanceof check above doesn't seem to really work
     // so we're duck checking it ??? WTF

@@ -1,22 +1,21 @@
-import { formatOffset, signedOffset } from '../impl/util.js';
-import Zone from '../zone.js';
-
-let singleton = null;
+import { signedOffset } from '../impl/util.js';
+import Zone, { OffsetFormat } from '../zone.js';
 
 /**
  * A zone with a fixed offset (meaning no DST)
  * @implements {Zone}
  */
 export default class FixedOffsetZone extends Zone {
+  private static utc: FixedOffsetZone | null = null;
   /**
    * Get a singleton instance of UTC
    * @return {FixedOffsetZone}
    */
   static get utcInstance() {
-    if (singleton === null) {
-      singleton = new FixedOffsetZone(0);
+    if (FixedOffsetZone.utc === null) {
+      FixedOffsetZone.utc = new FixedOffsetZone(0);
     }
-    return singleton;
+    return FixedOffsetZone.utc;
   }
 
   /**
@@ -24,7 +23,7 @@ export default class FixedOffsetZone extends Zone {
    * @param {number} offset - The offset in minutes
    * @return {FixedOffsetZone}
    */
-  static instance(offset) {
+  static instance(offset: number): FixedOffsetZone {
     return offset === 0 ? FixedOffsetZone.utcInstance : new FixedOffsetZone(offset);
   }
 
@@ -36,7 +35,7 @@ export default class FixedOffsetZone extends Zone {
    * @example FixedOffsetZone.parseSpecifier("UTC-6:00")
    * @return {FixedOffsetZone}
    */
-  static parseSpecifier(s) {
+  static parseSpecifier(s: string): FixedOffsetZone | null {
     if (s) {
       const r = s.match(/^utc(?:([+-]\d{1,2})(?::(\d{2}))?)?$/i);
       if (r) {
@@ -48,9 +47,8 @@ export default class FixedOffsetZone extends Zone {
 
   private fixed: number;
 
-  constructor(offset) {
+  constructor(offset: number) {
     super();
-    /** @private **/
     this.fixed = offset;
   }
 
@@ -59,7 +57,7 @@ export default class FixedOffsetZone extends Zone {
    * @override
    * @type {string}
    */
-  get type() {
+  get type(): string {
     return 'fixed';
   }
 
@@ -69,8 +67,8 @@ export default class FixedOffsetZone extends Zone {
    * @override
    * @type {string}
    */
-  get name() {
-    return this.fixed === 0 ? 'UTC' : `UTC${formatOffset(this.fixed, 'narrow')}`;
+  get name(): string {
+    return this.fixed === 0 ? 'UTC' : `UTC${Zone.formatOffset(this.fixed, 'narrow')}`;
   }
 
   /**
@@ -79,11 +77,11 @@ export default class FixedOffsetZone extends Zone {
    * @override
    * @type {string}
    */
-  get ianaName() {
+  get ianaName(): string {
     if (this.fixed === 0) {
       return 'Etc/UTC';
     } else {
-      return `Etc/GMT${formatOffset(-this.fixed, 'narrow')}`;
+      return `Etc/GMT${Zone.formatOffset(-this.fixed, 'narrow')}`;
     }
   }
 
@@ -91,9 +89,8 @@ export default class FixedOffsetZone extends Zone {
    * Returns the offset's common name at the specified timestamp.
    *
    * For fixed offset zones this equals to the zone name.
-   * @override
    */
-  offsetName() {
+  offsetName(): string {
     return this.name;
   }
 
@@ -105,8 +102,8 @@ export default class FixedOffsetZone extends Zone {
    *                          Accepts 'narrow', 'short', or 'techie'. Returning '+6', '+06:00', or '+0600' respectively
    * @return {string}
    */
-  formatOffset(ts, format) {
-    return formatOffset(this.fixed, format);
+  formatOffset(ts: number, format: OffsetFormat) {
+    return Zone.formatOffset(this.fixed, format);
   }
 
   /**
@@ -136,8 +133,8 @@ export default class FixedOffsetZone extends Zone {
    * @param {Zone} otherZone - the zone to compare
    * @return {boolean}
    */
-  equals(otherZone) {
-    return otherZone.type === 'fixed' && otherZone.fixed === this.fixed;
+  equals(otherZone: Zone) {
+    return otherZone instanceof FixedOffsetZone && otherZone.fixed === this.fixed;
   }
 
   /**

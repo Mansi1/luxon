@@ -1,9 +1,49 @@
 import { ZoneIsAbstractError } from './errors';
+import { padStart } from './impl/util';
+
+export type TimeZoneNameFormat = 'short' | 'long';
+
+export type OffsetFormat = 'narrow' | 'short' | 'techie';
+
+export interface ZoneOffsetOptions {
+  /**
+   * What style of offset to return.
+   */
+  format: TimeZoneNameFormat;
+  /**
+   * What locale to return the offset name in.
+   */
+  locale: string;
+}
 
 /**
  * @interface
  */
 export default class Zone {
+  /**
+   * Returns the offset's value as a string
+   * @param {number} ts - Epoch milliseconds for which to get the offset
+   * @param {string} format - What style of offset to return.
+   *                          Accepts 'narrow', 'short', or 'techie'. Returning '+6', '+06:00', or '+0600' respectively
+   * @return {string}
+   */
+  static formatOffset(offset: number, format: OffsetFormat) {
+    const hours = Math.trunc(Math.abs(offset / 60)),
+      minutes = Math.trunc(Math.abs(offset % 60)),
+      sign = offset >= 0 ? '+' : '-';
+
+    switch (format) {
+      case 'short':
+        return `${sign}${padStart(hours, 2)}:${padStart(minutes, 2)}`;
+      case 'narrow':
+        return `${sign}${hours}${minutes > 0 ? `:${minutes}` : ''}`;
+      case 'techie':
+        return `${sign}${padStart(hours, 2)}${padStart(minutes, 2)}`;
+      default:
+        throw new RangeError(`Value format ${format} is out of range for property format`);
+    }
+  }
+
   static isZone(o: unknown): o is Zone {
     return o instanceof Zone;
   }
@@ -53,7 +93,7 @@ export default class Zone {
    * @param {string} opts.locale - What locale to return the offset name in.
    * @return {string}
    */
-  offsetName(ts: number, opts: { format: string; local: string }): string {
+  offsetName(ts: number, opts?: Partial<ZoneOffsetOptions>): string | null {
     throw new ZoneIsAbstractError();
   }
 
@@ -65,7 +105,7 @@ export default class Zone {
    *                          Accepts 'narrow', 'short', or 'techie'. Returning '+6', '+06:00', or '+0600' respectively
    * @return {string}
    */
-  formatOffset(ts: number, format: string): string {
+  formatOffset(ts: number, format: OffsetFormat): string {
     throw new ZoneIsAbstractError();
   }
 
