@@ -1,10 +1,10 @@
-import Duration from './duration.js';
-import Interval from './interval.js';
-import Settings from './settings.js';
-import Info from './info.js';
-import Formatter from './impl/formatter.js';
-import FixedOffsetZone from './zones/fixedOffsetZone.js';
-import Locale from './impl/locale.js';
+import Duration from './duration';
+import Interval from './interval';
+import Settings from './settings';
+import Info from './info';
+import Formatter from './impl/formatter';
+import FixedOffsetZone from './zones/fixedOffsetZone';
+import Locale from './impl/locale';
 import {
   isUndefined,
   maybeArray,
@@ -19,17 +19,17 @@ import {
   roundTo,
   objToLocalTS,
   padStart,
-} from './impl/util.js';
-import { normalizeZone } from './impl/zoneUtil.js';
-import diff from './impl/diff.js';
-import { parseRFC2822Date, parseISODate, parseHTTPDate, parseSQL } from './impl/regexParser.js';
+} from './impl/util';
+import { normalizeZone } from './impl/zoneUtil';
+import diff from './impl/diff';
+import { parseRFC2822Date, parseISODate, parseHTTPDate, parseSQL } from './impl/regexParser';
 import {
   parseFromTokens,
   explainFromTokens,
   formatOptsToTokens,
   expandMacroTokens,
   TokenParser,
-} from './impl/tokenParser.js';
+} from './impl/tokenParser';
 import {
   gregorianToWeek,
   weekToGregorian,
@@ -41,18 +41,74 @@ import {
   hasInvalidTimeData,
   usesLocalWeekValues,
   isoWeekdayToLocal,
-} from './impl/conversions.js';
-import * as Formats from './impl/formats.js';
-import {
-  InvalidArgumentError,
-  ConflictingSpecificationError,
-  InvalidUnitError,
-  InvalidDateTimeError,
-} from './errors.js';
-import Invalid from './impl/invalid.js';
+} from './impl/conversions';
+import * as Formats from './impl/formats';
+import { InvalidArgumentError, ConflictingSpecificationError, InvalidUnitError, InvalidDateTimeError } from './errors';
+import Invalid from './impl/invalid';
+import Zone from './zone.js';
 
 const INVALID = 'Invalid DateTime';
 const MAX_DATE = 8.64e15;
+
+export type WeekdayNumbers = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export interface DateObjectUnits {
+  // a year, such as 1987
+  year?: number | undefined;
+  // a month, 1-12
+  month?: number | undefined;
+  // a day of the month, 1-31, depending on the month
+  day?: number | undefined;
+  // day of the year, 1-365 or 366
+  ordinal?: number | undefined;
+  // an ISO week year
+  weekYear?: number | undefined;
+  // a week year, according to the locale
+  localWeekYear?: number | undefined;
+  // an ISO week number, between 1 and 52 or 53, depending on the year
+  weekNumber?: number | undefined;
+  // a week number, between 1 and 52 or 53, depending on the year, according to the locale
+  localWeekNumber?: number | undefined;
+  // an ISO weekday, 1-7, where 1 is Monday and 7 is Sunday
+  weekday?: WeekdayNumbers | undefined;
+  // a weekday, 1-7, where 1 is the first day of the week, and 7 is the last, according to the locale
+  localWeekday?: WeekdayNumbers | undefined;
+  // hour of the day, 0-23
+  hour?: number | undefined;
+  // minute of the hour, 0-59
+  minute?: number | undefined;
+  // second of the minute, 0-59
+  second?: number | undefined;
+  // millisecond of the second, 0-999
+  millisecond?: number | undefined;
+}
+
+export type DateTimeMaybeValid = CanBeInvalid extends true ? DateTime<Valid> | DateTime<Invalid> : DateTime;
+
+export interface LocaleOptions {
+  /**
+   * @default system's locale
+   */
+  locale?: string | undefined;
+  outputCalendar?: CalendarSystem | undefined;
+  numberingSystem?: NumberingSystem | undefined;
+  weekSettings?: WeekSettings | undefined;
+}
+
+export interface DateTimeOptions extends LocaleOptions {
+  /**
+   * Use this zone if no offset is specified in the input string itself. Will also convert the time to this zone.
+   * @default local
+   */
+  zone?: string | Zone | undefined;
+  /**
+   * Override the zone with a fixed-offset zone specified in the string itself, if it specifies one.
+   * @default false
+   */
+  setZone?: boolean | undefined;
+}
+
+export type DateTimeJSOptions = Omit<DateTimeOptions, 'setZone'>;
 
 function unsupportedZone(zone) {
   return new Invalid('unsupported zone', `the zone "${zone.name}" is not supported`);
@@ -607,7 +663,39 @@ export default class DateTime {
    * @example DateTime.local(2017, 3, 12, 5, 45, 10, 765)       //~> 2017-03-12T05:45:10.765
    * @return {DateTime}
    */
-  static local() {
+  static local(
+    year: number,
+    month: number,
+    day: number,
+    hour: number,
+    minute: number,
+    second: number,
+    millisecond: number,
+    opts?: DateTimeJSOptions
+  ): DateTimeMaybeValid;
+  static local(
+    year: number,
+    month: number,
+    day: number,
+    hour: number,
+    minute: number,
+    second: number,
+    opts?: DateTimeJSOptions
+  ): DateTimeMaybeValid;
+  static local(
+    year: number,
+    month: number,
+    day: number,
+    hour: number,
+    minute: number,
+    opts?: DateTimeJSOptions
+  ): DateTimeMaybeValid;
+  static local(year: number, month: number, day: number, hour: number, opts?: DateTimeJSOptions): DateTimeMaybeValid;
+  static local(year: number, month: number, day: number, opts?: DateTimeJSOptions): DateTimeMaybeValid;
+  static local(year: number, month: number, opts?: DateTimeJSOptions): DateTimeMaybeValid;
+  static local(year: number, opts?: DateTimeJSOptions): DateTimeMaybeValid;
+  static local(opts?: DateTimeJSOptions): DateTime<Valid>;
+  static local(): DateTime<Valid> | DateTimeMaybeValid {
     const [opts, args] = lastOpts(arguments),
       [year, month, day, hour, minute, second, millisecond] = args;
     return quickDT({ year, month, day, hour, minute, second, millisecond }, opts);
@@ -661,7 +749,7 @@ export default class DateTime {
    * @param {string|Zone} [options.zone='local'] - the zone to place the DateTime into
    * @return {DateTime}
    */
-  static fromJSDate(date, options = {}) {
+  static fromJSDate(date, options: { zone?: string | Zone } = {}) {
     const ts = isDate(date) ? date.valueOf() : NaN;
     if (Number.isNaN(ts)) {
       return DateTime.invalid('invalid input');
@@ -763,7 +851,7 @@ export default class DateTime {
    * @example DateTime.fromObject({ localWeekYear: 2022, localWeekNumber: 1, localWeekday: 1 }, { locale: "en-US" }).toISODate() //=> '2021-12-26'
    * @return {DateTime}
    */
-  static fromObject(obj, opts = {}) {
+  static fromObject(obj: DateObjectUnits, opts?: DateTimeJSOptions): DateTimeMaybeValid {
     obj = obj || {};
     const zoneToUse = normalizeZone(opts.zone, Settings.defaultZone);
     if (!zoneToUse.isValid) {
@@ -2097,7 +2185,7 @@ export default class DateTime {
    * i2.diff(i1, ['months', 'days', 'hours']).toObject() //=> { months: 16, days: 19, hours: 0.75 }
    * @return {Duration}
    */
-  diff(otherDateTime, unit = 'milliseconds', opts = {}) {
+  diff(otherDateTime: DateTime, unit = 'milliseconds', opts = {}) {
     if (!this.isValid || !otherDateTime.isValid) {
       return Duration.invalid('created by diffing an invalid DateTime');
     }

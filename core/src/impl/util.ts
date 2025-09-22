@@ -4,13 +4,10 @@
   it up into, say, parsingUtil.js and basicUtil.js and so on. But they are divided up by feature area.
 */
 
-import { InvalidArgumentError } from '../errors.js';
-import Settings from '../settings.js';
-import { dayOfWeek, isoWeekdayToLocal } from './conversions.js';
-
-/**
- * @private
- */
+import { InvalidArgumentError } from '../errors';
+import Settings from '../settings';
+import { TimeZoneNameFormat } from '../zone';
+import { dayOfWeek, isoWeekdayToLocal } from './conversions';
 
 export type integer = number & { __type: 'integer' };
 
@@ -92,8 +89,9 @@ export function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-export function validateWeekSettings(settings) {
+export function validateWeekSettings(settings: WeekSettings) {
   if (settings == null) {
+    //todo: remove that shit its validating
     return null;
   } else if (typeof settings !== 'object') {
     throw new InvalidArgumentError('Week settings must be an object');
@@ -106,6 +104,7 @@ export function validateWeekSettings(settings) {
     ) {
       throw new InvalidArgumentError('Invalid week settings');
     }
+    //todo: its validating shoud not do manipulations
     return {
       firstDay: settings.firstDay,
       minimalDays: settings.minimalDays,
@@ -121,11 +120,11 @@ export function integerBetween(thing, bottom, top) {
 }
 
 // x % n but takes the sign of n instead of x
-export function floorMod(x, n) {
+export function floorMod(x: number, n: number) {
   return x - n * Math.floor(x / n);
 }
 
-export function padStart(input, n = 2) {
+export function padStart(input: number, n = 2) {
   const isNeg = input < 0;
   let padded;
   if (isNeg) {
@@ -136,7 +135,7 @@ export function padStart(input, n = 2) {
   return padded;
 }
 
-export function parseInteger(string) {
+export function parseInteger(string: string) {
   if (isUndefined(string) || string === null || string === '') {
     return undefined;
   } else {
@@ -144,7 +143,7 @@ export function parseInteger(string) {
   }
 }
 
-export function parseFloating(string) {
+export function parseFloating(string: string) {
   if (isUndefined(string) || string === null || string === '') {
     return undefined;
   } else {
@@ -152,7 +151,7 @@ export function parseFloating(string) {
   }
 }
 
-export function parseMillis(fraction) {
+export function parseMillis(fraction: string | null | undefined): number | undefined {
   // Return undefined (instead of 0) in these cases, where fraction is not set
   if (isUndefined(fraction) || fraction === null || fraction === '') {
     return undefined;
@@ -162,7 +161,9 @@ export function parseMillis(fraction) {
   }
 }
 
-export function roundTo(number, digits, rounding = 'round') {
+export type Rounding = 'expand' | 'trunc' | 'floor' | 'round' | 'ceil';
+
+export function roundTo(number: number, digits: number, rounding: Rounding = 'round'): number {
   const factor = 10 ** digits;
   switch (rounding) {
     case 'expand':
@@ -176,9 +177,13 @@ export function roundTo(number, digits, rounding = 'round') {
     case 'ceil':
       return Math.ceil(number * factor) / factor;
     default:
-      throw new RangeError(`Value rounding ${rounding} is out of range`);
+      return assertNever(rounding, `Value rounding ${rounding} is out of range`);
   }
 }
+
+export const assertNever = (_type: never, message: string): never => {
+  throw new Error(message);
+};
 
 // DATE BASICS
 
@@ -236,7 +241,12 @@ export function untruncateYear(year) {
 
 // PARSING
 
-export function parseZoneInfo(ts, offsetFormat, locale, timeZone = null) {
+export function parseZoneInfo(
+  ts: number,
+  offsetFormat: TimeZoneNameFormat | undefined,
+  locale: string | undefined,
+  timeZone: string | null = null
+): string | null {
   const date = new Date(ts),
     intlOpts: Intl.DateTimeFormatOptions = {
       hourCycle: 'h23',
@@ -275,7 +285,7 @@ export function signedOffset(offHourStr, offMinuteStr) {
 
 // COERCION
 
-export function asNumber(value) {
+export function asNumber(value: unknown) {
   const numericValue = Number(value);
   if (typeof value === 'boolean' || value === '' || !Number.isFinite(numericValue))
     throw new InvalidArgumentError(`Invalid unit value ${value}`);
@@ -292,30 +302,6 @@ export function normalizeObject(obj, normalizer) {
     }
   }
   return normalized;
-}
-
-/**
- * Returns the offset's value as a string
- * @param {number} ts - Epoch milliseconds for which to get the offset
- * @param {string} format - What style of offset to return.
- *                          Accepts 'narrow', 'short', or 'techie'. Returning '+6', '+06:00', or '+0600' respectively
- * @return {string}
- */
-export function formatOffset(offset, format) {
-  const hours = Math.trunc(Math.abs(offset / 60)),
-    minutes = Math.trunc(Math.abs(offset % 60)),
-    sign = offset >= 0 ? '+' : '-';
-
-  switch (format) {
-    case 'short':
-      return `${sign}${padStart(hours, 2)}:${padStart(minutes, 2)}`;
-    case 'narrow':
-      return `${sign}${hours}${minutes > 0 ? `:${minutes}` : ''}`;
-    case 'techie':
-      return `${sign}${padStart(hours, 2)}${padStart(minutes, 2)}`;
-    default:
-      throw new RangeError(`Value format ${format} is out of range for property format`);
-  }
 }
 
 export function timeObject(obj) {

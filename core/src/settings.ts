@@ -4,17 +4,23 @@ import Locale from './impl/locale.js';
 import DateTime from './datetime.js';
 
 import { normalizeZone } from './impl/zoneUtil.js';
-import { validateWeekSettings } from './impl/util.js';
 import { resetDigitRegexCache } from './impl/digits.js';
+import type Zone from './zone.js';
 
-let now = () => Date.now(),
-  defaultZone = 'system',
-  defaultLocale = null,
-  defaultNumberingSystem = null,
-  defaultOutputCalendar = null,
-  twoDigitCutoffYear = 60,
-  throwOnInvalid,
-  defaultWeekSettings = null;
+export interface WeekSettings {
+  firstDay: WeekdayNumbers;
+  minimalDays: WeekdayNumbers;
+  weekend: WeekdayNumbers[];
+}
+
+let now: () => number = () => Date.now();
+let defaultZone: Zone | string = 'system';
+let defaultLocale: string | null = null;
+let defaultNumberingSystem: string | null = null;
+let defaultOutputCalendar: string | null = null;
+let twoDigitCutoffYear: number = 60;
+let throwOnInvalid: boolean = false;
+let defaultWeekSettings: WeekSettings | null = null;
 
 /**
  * Settings contains static getters and setters that control Luxon's overall behavior. Luxon is a simple library with few options, but the ones it does have live here.
@@ -24,7 +30,7 @@ export default class Settings {
    * Get the callback for returning the current timestamp.
    * @type {function}
    */
-  static get now() {
+  static get now(): () => number {
     return now;
   }
 
@@ -35,7 +41,7 @@ export default class Settings {
    * @example Settings.now = () => Date.now() + 3000 // pretend it is 3 seconds in the future
    * @example Settings.now = () => 0 // always pretend it's Jan 1, 1970 at midnight in UTC time
    */
-  static set now(n) {
+  static set now(n: () => number) {
     now = n;
   }
 
@@ -44,7 +50,7 @@ export default class Settings {
    * Use the value "system" to reset this value to the system's time zone.
    * @type {string}
    */
-  static set defaultZone(zone) {
+  static set defaultZone(zone: Zone | string) {
     defaultZone = zone;
   }
 
@@ -53,7 +59,7 @@ export default class Settings {
    * The default value is the system's time zone (the one set on the machine that runs this code).
    * @type {Zone}
    */
-  static get defaultZone() {
+  static get defaultZone(): ZoneMaybeValid {
     return normalizeZone(defaultZone, SystemZone.instance);
   }
 
@@ -61,7 +67,7 @@ export default class Settings {
    * Get the default locale to create DateTimes with. Does not affect existing instances.
    * @type {string}
    */
-  static get defaultLocale() {
+  static get defaultLocale(): string | null {
     return defaultLocale;
   }
 
@@ -69,7 +75,7 @@ export default class Settings {
    * Set the default locale to create DateTimes with. Does not affect existing instances.
    * @type {string}
    */
-  static set defaultLocale(locale) {
+  static set defaultLocale(locale: string) {
     defaultLocale = locale;
   }
 
@@ -77,7 +83,7 @@ export default class Settings {
    * Get the default numbering system to create DateTimes with. Does not affect existing instances.
    * @type {string}
    */
-  static get defaultNumberingSystem() {
+  static get defaultNumberingSystem(): string | null {
     return defaultNumberingSystem;
   }
 
@@ -85,7 +91,7 @@ export default class Settings {
    * Set the default numbering system to create DateTimes with. Does not affect existing instances.
    * @type {string}
    */
-  static set defaultNumberingSystem(numberingSystem) {
+  static set defaultNumberingSystem(numberingSystem: string) {
     defaultNumberingSystem = numberingSystem;
   }
 
@@ -93,7 +99,7 @@ export default class Settings {
    * Get the default output calendar to create DateTimes with. Does not affect existing instances.
    * @type {string}
    */
-  static get defaultOutputCalendar() {
+  static get defaultOutputCalendar(): string | null {
     return defaultOutputCalendar;
   }
 
@@ -115,7 +121,7 @@ export default class Settings {
   /**
    * @return {WeekSettings|null}
    */
-  static get defaultWeekSettings() {
+  static get defaultWeekSettings(): WeekSettings | null {
     return defaultWeekSettings;
   }
 
@@ -123,18 +129,16 @@ export default class Settings {
    * Allows overriding the default locale week settings, i.e. the start of the week, the weekend and
    * how many days are required in the first week of a year.
    * Does not affect existing instances.
-   *
-   * @param {WeekSettings|null} weekSettings
    */
-  static set defaultWeekSettings(weekSettings) {
-    defaultWeekSettings = validateWeekSettings(weekSettings);
+  static set defaultWeekSettings(weekSettings: WeekSettings) {
+    defaultWeekSettings = Locale.validateWeekSettings(weekSettings);
   }
 
   /**
    * Get the cutoff year for whether a 2-digit year string is interpreted in the current or previous century. Numbers higher than the cutoff will be considered to mean 19xx and numbers lower or equal to the cutoff will be considered 20xx.
    * @type {number}
    */
-  static get twoDigitCutoffYear() {
+  static get twoDigitCutoffYear(): number {
     return twoDigitCutoffYear;
   }
 
@@ -147,7 +151,7 @@ export default class Settings {
    * @example Settings.twoDigitCutoffYear = 1950 // interpreted as 50
    * @example Settings.twoDigitCutoffYear = 2050 // ALSO interpreted as 50
    */
-  static set twoDigitCutoffYear(cutoffYear) {
+  static set twoDigitCutoffYear(cutoffYear: number) {
     twoDigitCutoffYear = cutoffYear % 100;
   }
 
@@ -155,7 +159,7 @@ export default class Settings {
    * Get whether Luxon will throw when it encounters invalid DateTimes, Durations, or Intervals
    * @type {boolean}
    */
-  static get throwOnInvalid() {
+  static get throwOnInvalid(): boolean {
     return throwOnInvalid;
   }
 
@@ -163,7 +167,7 @@ export default class Settings {
    * Set whether Luxon will throw when it encounters invalid DateTimes, Durations, or Intervals
    * @type {boolean}
    */
-  static set throwOnInvalid(t) {
+  static set throwOnInvalid(t: boolean) {
     throwOnInvalid = t;
   }
 

@@ -7,16 +7,16 @@ import {
   weeksInWeekYear,
   isInteger,
   isUndefined,
-} from "./util.js";
-import Invalid from "./invalid.js";
-import { ConflictingSpecificationError } from "../errors.js";
+} from './util.js';
+import Invalid from './invalid.js';
+import { ConflictingSpecificationError } from '../errors.js';
 
 const nonLeapLadder = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
   leapLadder = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
 
 function unitOutOfRange(unit, value) {
   return new Invalid(
-    "unit out of range",
+    'unit out of range',
     `you specified ${value} (of type ${typeof value}) as a ${unit}, which is invalid`
   );
 }
@@ -47,10 +47,6 @@ function uncomputeOrdinal(year, ordinal) {
 export function isoWeekdayToLocal(isoWeekday, startOfWeek) {
   return ((isoWeekday - startOfWeek + 7) % 7) + 1;
 }
-
-/**
- * @private
- */
 
 export function gregorianToWeek(gregObj, minDaysInFirstWeek = 4, startOfWeek = 1) {
   const { year, month, day } = gregObj,
@@ -115,17 +111,12 @@ export function ordinalToGregorian(ordinalData) {
  */
 export function usesLocalWeekValues(obj, loc) {
   const hasLocaleWeekData =
-    !isUndefined(obj.localWeekday) ||
-    !isUndefined(obj.localWeekNumber) ||
-    !isUndefined(obj.localWeekYear);
+    !isUndefined(obj.localWeekday) || !isUndefined(obj.localWeekNumber) || !isUndefined(obj.localWeekYear);
   if (hasLocaleWeekData) {
-    const hasIsoWeekData =
-      !isUndefined(obj.weekday) || !isUndefined(obj.weekNumber) || !isUndefined(obj.weekYear);
+    const hasIsoWeekData = !isUndefined(obj.weekday) || !isUndefined(obj.weekNumber) || !isUndefined(obj.weekYear);
 
     if (hasIsoWeekData) {
-      throw new ConflictingSpecificationError(
-        "Cannot mix locale-based week fields with ISO-based week fields"
-      );
+      throw new ConflictingSpecificationError('Cannot mix locale-based week fields with ISO-based week fields');
     }
     if (!isUndefined(obj.localWeekday)) obj.weekday = obj.localWeekday;
     if (!isUndefined(obj.localWeekNumber)) obj.weekNumber = obj.localWeekNumber;
@@ -144,19 +135,15 @@ export function usesLocalWeekValues(obj, loc) {
 
 export function hasInvalidWeekData(obj, minDaysInFirstWeek = 4, startOfWeek = 1) {
   const validYear = isInteger(obj.weekYear),
-    validWeek = integerBetween(
-      obj.weekNumber,
-      1,
-      weeksInWeekYear(obj.weekYear, minDaysInFirstWeek, startOfWeek)
-    ),
+    validWeek = integerBetween(obj.weekNumber, 1, weeksInWeekYear(obj.weekYear, minDaysInFirstWeek, startOfWeek)),
     validWeekday = integerBetween(obj.weekday, 1, 7);
 
   if (!validYear) {
-    return unitOutOfRange("weekYear", obj.weekYear);
+    return unitOutOfRange('weekYear', obj.weekYear);
   } else if (!validWeek) {
-    return unitOutOfRange("week", obj.weekNumber);
+    return unitOutOfRange('week', obj.weekNumber);
   } else if (!validWeekday) {
-    return unitOutOfRange("weekday", obj.weekday);
+    return unitOutOfRange('weekday', obj.weekday);
   } else return false;
 }
 
@@ -165,9 +152,9 @@ export function hasInvalidOrdinalData(obj) {
     validOrdinal = integerBetween(obj.ordinal, 1, daysInYear(obj.year));
 
   if (!validYear) {
-    return unitOutOfRange("year", obj.year);
+    return unitOutOfRange('year', obj.year);
   } else if (!validOrdinal) {
-    return unitOutOfRange("ordinal", obj.ordinal);
+    return unitOutOfRange('ordinal', obj.ordinal);
   } else return false;
 }
 
@@ -177,30 +164,28 @@ export function hasInvalidGregorianData(obj) {
     validDay = integerBetween(obj.day, 1, daysInMonth(obj.year, obj.month));
 
   if (!validYear) {
-    return unitOutOfRange("year", obj.year);
+    return unitOutOfRange('year', obj.year);
   } else if (!validMonth) {
-    return unitOutOfRange("month", obj.month);
+    return unitOutOfRange('month', obj.month);
   } else if (!validDay) {
-    return unitOutOfRange("day", obj.day);
+    return unitOutOfRange('day', obj.day);
   } else return false;
 }
 
 export function hasInvalidTimeData(obj) {
   const { hour, minute, second, millisecond } = obj;
-  const validHour =
-      integerBetween(hour, 0, 23) ||
-      (hour === 24 && minute === 0 && second === 0 && millisecond === 0),
+  const validHour = integerBetween(hour, 0, 23) || (hour === 24 && minute === 0 && second === 0 && millisecond === 0),
     validMinute = integerBetween(minute, 0, 59),
     validSecond = integerBetween(second, 0, 59),
     validMillisecond = integerBetween(millisecond, 0, 999);
 
   if (!validHour) {
-    return unitOutOfRange("hour", hour);
+    return unitOutOfRange('hour', hour);
   } else if (!validMinute) {
-    return unitOutOfRange("minute", minute);
+    return unitOutOfRange('minute', minute);
   } else if (!validSecond) {
-    return unitOutOfRange("second", second);
+    return unitOutOfRange('second', second);
   } else if (!validMillisecond) {
-    return unitOutOfRange("millisecond", millisecond);
+    return unitOutOfRange('millisecond', millisecond);
   } else return false;
 }

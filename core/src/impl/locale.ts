@@ -1,95 +1,97 @@
-import { hasLocaleWeekInfo, hasRelative, padStart, roundTo, validateWeekSettings } from './util.js';
+import { hasLocaleWeekInfo, hasRelative, integerBetween, padStart, roundTo, validateWeekSettings } from './util.js';
+import { Cache } from './cache';
 import * as English from './english.js';
-import Settings from '../settings.js';
+import Settings, { WeekSettings } from '../settings.js';
 import DateTime from '../datetime.js';
 import IANAZone from '../zones/IANAZone.js';
+import { InvalidArgumentError } from '../errors.js';
 
-// todo - remap caching
+export type WeedInfo = {
+  firstDay: number;
+  minimalDays: number;
+  weekend: Array<number>;
+};
 
-let intlLFCache = {};
-function getCachedLF(locString, opts = {}) {
-  const key = JSON.stringify([locString, opts]);
-  let dtf = intlLFCache[key];
-  if (!dtf) {
-    dtf = new Intl.ListFormat(locString, opts);
-    intlLFCache[key] = dtf;
+type LocalOption<Option> = {
+  locale: string;
+  opts?: Option;
+};
+
+const caches: Array<{ clear: () => void }> = [];
+
+const getCachedLF = new Cache<Intl.ListFormat, LocalOption<Intl.ListFormatOptions>>(
+  ({ locale, opts = {} }) => JSON.stringify([locale, opts]),
+  ({ locale, opts = {} }) => new Intl.ListFormat(locale, opts),
+  (cache) => {
+    caches.push(cache);
   }
-  return dtf;
-}
+).getAndSet;
 
-const intlDTCache = new Map();
-function getCachedDTF(locString, opts = {}) {
-  const key = JSON.stringify([locString, opts]);
-  let dtf = intlDTCache.get(key);
-  if (dtf === undefined) {
-    dtf = new Intl.DateTimeFormat(locString, opts);
-    intlDTCache.set(key, dtf);
+const getCachedDTF = new Cache<Intl.DateTimeFormat, { locale: string; opts?: Intl.DateTimeFormatOptions }>(
+  ({ locale, opts = {} }) => JSON.stringify([locale, opts]),
+  ({ locale, opts = {} }) => new Intl.DateTimeFormat(locale, opts),
+  (cache) => {
+    caches.push(cache);
   }
-  return dtf;
-}
+).getAndSet;
 
-const intlNumCache = new Map();
-function getCachedINF(locString, opts = {}) {
-  const key = JSON.stringify([locString, opts]);
-  let inf = intlNumCache.get(key);
-  if (inf === undefined) {
-    inf = new Intl.NumberFormat(locString, opts);
-    intlNumCache.set(key, inf);
+const getCachedINF = new Cache<Intl.NumberFormat, LocalOption<Intl.NumberFormatOptions>>(
+  ({ locale, opts = {} }) => JSON.stringify([locale, opts]),
+  ({ locale, opts = {} }) => new Intl.NumberFormat(locale, opts),
+  (cache) => {
+    caches.push(cache);
   }
-  return inf;
-}
+).getAndSet;
 
-const intlRelCache = new Map();
-function getCachedRTF(locString, opts = {}) {
-  //@ts-expect-error fixme
-  const { base, ...cacheKeyOpts } = opts; // exclude `base` from the options
-  const key = JSON.stringify([locString, cacheKeyOpts]);
-  let inf = intlRelCache.get(key);
-  if (inf === undefined) {
-    inf = new Intl.RelativeTimeFormat(locString, opts);
-    intlRelCache.set(key, inf);
+const getCachedRTF = new Cache<Intl.RelativeTimeFormat, LocalOption<Intl.RelativeTimeFormatOptions>>(
+  ({ locale, opts = {} }) => {
+    //@ts-expect-error fixme
+    const { base, ...cacheKeyOpts } = opts;
+    // exclude `base` from the options
+    return JSON.stringify([locale, cacheKeyOpts]);
+  },
+  ({ locale, opts = {} }) => new Intl.RelativeTimeFormat(locale, opts),
+  (cache) => {
+    caches.push(cache);
   }
-  return inf;
-}
+).getAndSet;
 
-let sysLocaleCache = null;
-function systemLocale() {
-  if (sysLocaleCache) {
-    return sysLocaleCache;
-  } else {
-    sysLocaleCache = new Intl.DateTimeFormat().resolvedOptions().locale;
-    return sysLocaleCache;
+const getCachedIntResolvedOptions = new Cache<Intl.ResolvedDateTimeFormatOptions, string>(
+  (locString) => locString,
+  (locString) => new Intl.DateTimeFormat(locString).resolvedOptions(),
+  (cache) => {
+    caches.push(cache);
   }
-}
+).getAndSet;
 
-const intlResolvedOptionsCache = new Map();
-function getCachedIntResolvedOptions(locString) {
-  let opts = intlResolvedOptionsCache.get(locString);
-  if (opts === undefined) {
-    opts = new Intl.DateTimeFormat(locString).resolvedOptions();
-    intlResolvedOptionsCache.set(locString, opts);
-  }
-  return opts;
-}
-
-const weekInfoCache = new Map();
-function getCachedWeekInfo(locString) {
-  let data = weekInfoCache.get(locString);
-  if (!data) {
+const getCachedWeekInfo = new Cache<WeedInfo, string>(
+  (locString) => locString,
+  (locString) => {
     const locale = new Intl.Locale(locString);
     // browsers currently implement this as a property, but spec says it should be a getter function
     //@ts-expect-error fixme
-    data = 'getWeekInfo' in locale ? locale.getWeekInfo() : locale.weekInfo;
+    let data = 'getWeekInfo' in locale ? locale.getWeekInfo() : locale.weekInfo;
     // minimalDays was removed from WeekInfo: https://github.com/tc39/proposal-intl-locale-info/issues/86
     if (!('minimalDays' in data)) {
       data = { ...fallbackWeekSettings, ...data };
     }
-    weekInfoCache.set(locString, data);
+    return data;
+  },
+  (cache) => {
+    caches.push(cache);
   }
-  return data;
-}
+).getAndSet;
 
-function parseLocaleString(localeStr) {
+const systemLocale = () =>
+  new Cache<string, 'static'>(
+    () => 'static',
+    () => new Intl.DateTimeFormat().resolvedOptions().locale,
+    (cache) => {
+      caches.push(cache);
+    }
+  ).getAndSet('static');
+
+function parseLocaleString(localeStr: string) {
   // I really want to avoid writing a BCP 47 parser
   // see, e.g. https://github.com/wooorm/bcp-47
   // Instead, we'll do this:
@@ -113,11 +115,11 @@ function parseLocaleString(localeStr) {
     let options;
     let selectedStr;
     try {
-      options = getCachedDTF(localeStr).resolvedOptions();
+      options = getCachedDTF({ locale: localeStr }).resolvedOptions();
       selectedStr = localeStr;
     } catch (e) {
       const smaller = localeStr.substring(0, uIndex);
-      options = getCachedDTF(smaller).resolvedOptions();
+      options = getCachedDTF({ locale: smaller }).resolvedOptions();
       selectedStr = smaller;
     }
 
@@ -126,7 +128,7 @@ function parseLocaleString(localeStr) {
   }
 }
 
-function intlConfigString(localeStr, numberingSystem, outputCalendar) {
+function intlConfigString(localeStr: string, numberingSystem?: string, outputCalendar?: string) {
   if (outputCalendar || numberingSystem) {
     if (!localeStr.includes('-u-')) {
       localeStr += '-u';
@@ -197,7 +199,7 @@ class PolyNumberFormatter {
   private floor;
   private inf;
 
-  constructor(intl, forceSimple, opts) {
+  constructor(intl: string, forceSimple: boolean, opts) {
     this.padTo = opts.padTo || 0;
     this.floor = opts.floor || false;
 
@@ -206,7 +208,7 @@ class PolyNumberFormatter {
     if (!forceSimple || Object.keys(otherOpts).length > 0) {
       const intlOpts = { useGrouping: false, ...opts };
       if (opts.padTo > 0) intlOpts.minimumIntegerDigits = opts.padTo;
-      this.inf = getCachedINF(intl, intlOpts);
+      this.inf = getCachedINF({ locale: intl, opts: intlOpts });
     }
   }
 
@@ -274,7 +276,7 @@ class PolyDateFormatter {
 
     const intlOpts = { ...this.opts };
     intlOpts.timeZone = intlOpts.timeZone || z;
-    this.dtf = getCachedDTF(intl, intlOpts);
+    this.dtf = getCachedDTF({ locale: intl, opts: intlOpts });
   }
 
   format() {
@@ -321,10 +323,10 @@ class PolyRelFormatter {
   private opts;
   private rtf;
 
-  constructor(intl, isEnglish, opts) {
+  constructor(intl: string, isEnglish: boolean, opts: Intl.RelativeTimeFormatOptions) {
     this.opts = { style: 'long', ...opts };
     if (!isEnglish && hasRelative()) {
-      this.rtf = getCachedRTF(intl, opts);
+      this.rtf = getCachedRTF({ locale: intl, opts });
     }
   }
 
@@ -345,7 +347,7 @@ class PolyRelFormatter {
   }
 }
 
-const fallbackWeekSettings = {
+const fallbackWeekSettings: WeedInfo = {
   firstDay: 1,
   minimalDays: 4,
   weekend: [6, 7],
@@ -355,6 +357,30 @@ const fallbackWeekSettings = {
  * @private
  */
 export default class Locale {
+  static validateWeekSettings(settings: WeekSettings) {
+    if (settings == null) {
+      //todo: remove that shit its validating
+      return null;
+    } else if (typeof settings !== 'object') {
+      throw new InvalidArgumentError('Week settings must be an object');
+    } else {
+      if (
+        !integerBetween(settings.firstDay, 1, 7) ||
+        !integerBetween(settings.minimalDays, 1, 7) ||
+        !Array.isArray(settings.weekend) ||
+        settings.weekend.some((v) => !integerBetween(v, 1, 7))
+      ) {
+        throw new InvalidArgumentError('Invalid week settings');
+      }
+      //todo: its validating shoud not do manipulations
+      return {
+        firstDay: settings.firstDay,
+        minimalDays: settings.minimalDays,
+        weekend: Array.from(settings.weekend),
+      };
+    }
+  }
+
   static fromOpts(opts) {
     return Locale.create(opts.locale, opts.numberingSystem, opts.outputCalendar, opts.weekSettings, opts.defaultToEN);
   }
@@ -371,17 +397,12 @@ export default class Locale {
     const localeR = specifiedLocale || (defaultToEN ? 'en-US' : systemLocale());
     const numberingSystemR = numberingSystem || Settings.defaultNumberingSystem;
     const outputCalendarR = outputCalendar || Settings.defaultOutputCalendar;
-    const weekSettingsR = validateWeekSettings(weekSettings) || Settings.defaultWeekSettings;
+    const weekSettingsR = Locale.validateWeekSettings(weekSettings) || Settings.defaultWeekSettings;
     return new Locale(localeR, numberingSystemR, outputCalendarR, weekSettingsR, specifiedLocale);
   }
 
   static resetCache() {
-    sysLocaleCache = null;
-    intlDTCache.clear();
-    intlNumCache.clear();
-    intlRelCache.clear();
-    intlResolvedOptionsCache.clear();
-    weekInfoCache.clear();
+    caches.forEach((cache) => cache.clear());
   }
 
   static fromObject({
@@ -549,8 +570,8 @@ export default class Locale {
     return new PolyRelFormatter(this.intl, this.isEnglish(), opts);
   }
 
-  listFormatter(opts = {}) {
-    return getCachedLF(this.intl, opts);
+  listFormatter(opts: Intl.ListFormatOptions = {}): Intl.ListFormat {
+    return getCachedLF({ locale: this.intl, opts });
   }
 
   isEnglish() {

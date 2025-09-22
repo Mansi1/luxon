@@ -1,23 +1,23 @@
-import DateTime, { friendlyDateTime, parseDataToDateTime } from "./datetime.js";
-import Duration from "./duration.js";
-import Settings from "./settings.js";
-import { InvalidArgumentError, InvalidIntervalError } from "./errors.js";
-import Invalid from "./impl/invalid.js";
-import Formatter from "./impl/formatter.js";
-import * as Formats from "./impl/formats.js";
-import { parseISOIntervalEnd } from "./impl/regexParser.js";
+import DateTime, { friendlyDateTime, parseDataToDateTime } from './datetime.js';
+import Duration from './duration.js';
+import Settings from './settings.js';
+import { InvalidArgumentError, InvalidIntervalError } from './errors.js';
+import Invalid from './impl/invalid.js';
+import Formatter from './impl/formatter.js';
+import * as Formats from './impl/formats.js';
+import { parseISOIntervalEnd } from './impl/regexParser.js';
 
-const INVALID = "Invalid Interval";
+const INVALID = 'Invalid Interval';
 
 // checks if the start is equal to or before the end
 function validateStartEnd(start, end) {
   if (!start || !start.isValid) {
-    return Interval.invalid("missing or invalid start");
+    return Interval.invalid('missing or invalid start');
   } else if (!end || !end.isValid) {
-    return Interval.invalid("missing or invalid end");
+    return Interval.invalid('missing or invalid end');
   } else if (end < start) {
     return Interval.invalid(
-      "end before start",
+      'end before start',
       `The end of an interval must be after its start, but you had start=${start.toISO()} and end=${end.toISO()}`
     );
   } else {
@@ -38,9 +38,10 @@ function validateStartEnd(start, end) {
  * * **Output** To convert the Interval into other representations, see {@link Interval#toString}, {@link Interval#toLocaleString}, {@link Interval#toISO}, {@link Interval#toISODate}, {@link Interval#toISOTime}, {@link Interval#toFormat}, and {@link Interval#toDuration}.
  */
 export default class Interval {
-  /**
-   * @private
-   */
+  private s;
+  private e;
+  private invalid;
+  private isLuxonInterval: boolean;
   constructor(config) {
     /**
      * @access private
@@ -68,7 +69,7 @@ export default class Interval {
    */
   static invalid(reason, explanation = null) {
     if (!reason) {
-      throw new InvalidArgumentError("need to specify a reason the Interval is invalid");
+      throw new InvalidArgumentError('need to specify a reason the Interval is invalid');
     }
 
     const invalid = reason instanceof Invalid ? reason : new Invalid(reason, explanation);
@@ -136,7 +137,7 @@ export default class Interval {
    */
   static fromISO(text, opts) {
     const { zone, setZone, ...restOpts } = opts || {};
-    const [s, e] = (text || "").split("/", 2);
+    const [s, e] = (text || '').split('/', 2);
     if (s && e) {
       let start, startIsValid;
       try {
@@ -157,7 +158,7 @@ export default class Interval {
           zone: startIsValid ? start.zone : zone,
           setZone: true,
         };
-        end = parseDataToDateTime(vals, parsedZone, endParseOpts, "ISO 8601 Interval end", e);
+        end = parseDataToDateTime(vals, parsedZone, endParseOpts, 'ISO 8601 Interval end', e);
         endIsValid = end.isValid;
       } catch (e) {
         endIsValid = false;
@@ -187,7 +188,7 @@ export default class Interval {
         }
       }
     }
-    return Interval.invalid("unparsable", `the input "${text}" can't be parsed as ISO 8601`);
+    return Interval.invalid('unparsable', `the input "${text}" can't be parsed as ISO 8601`);
   }
 
   /**
@@ -253,7 +254,7 @@ export default class Interval {
    * @param {string} unit - the unit (such as 'hours' or 'days') to return the length in.
    * @return {number}
    */
-  length(unit = "milliseconds") {
+  length(unit = 'milliseconds') {
     return this.isValid ? this.toDuration(...[unit]).get(unit) : NaN;
   }
 
@@ -266,7 +267,7 @@ export default class Interval {
    * @param {boolean} [opts.useLocaleWeeks=false] - If true, use weeks based on the locale, i.e. use the locale-dependent start of the week; this operation will always use the locale of the start DateTime
    * @return {number}
    */
-  count(unit = "milliseconds", opts) {
+  count(unit = 'milliseconds', opts) {
     if (!this.isValid) return NaN;
     const start = this.start.startOf(unit, opts);
     let end;
@@ -373,7 +374,7 @@ export default class Interval {
   splitBy(duration) {
     const dur = Duration.fromDurationLike(duration);
 
-    if (!this.isValid || !dur.isValid || dur.as("milliseconds") === 0) {
+    if (!this.isValid || !dur.isValid || dur.as('milliseconds') === 0) {
       return [];
     }
 
@@ -527,14 +528,14 @@ export default class Interval {
       currentCount = 0;
     const results = [],
       ends = intervals.map((i) => [
-        { time: i.s, type: "s" },
-        { time: i.e, type: "e" },
+        { time: i.s, type: 's' },
+        { time: i.e, type: 'e' },
       ]),
       flattened = Array.prototype.concat(...ends),
       arr = flattened.sort((a, b) => a.time - b.time);
 
     for (const i of arr) {
-      currentCount += i.type === "s" ? 1 : -1;
+      currentCount += i.type === 's' ? 1 : -1;
 
       if (currentCount === 1) {
         start = i.time;
@@ -574,7 +575,7 @@ export default class Interval {
    * Returns a string representation of this Interval appropriate for the REPL.
    * @return {string}
    */
-  [Symbol.for("nodejs.util.inspect.custom")]() {
+  [Symbol.for('nodejs.util.inspect.custom')]() {
     if (this.isValid) {
       return `Interval { start: ${this.s.toISO()}, end: ${this.e.toISO()} }`;
     } else {
@@ -601,9 +602,7 @@ export default class Interval {
    * @return {string}
    */
   toLocaleString(formatOpts = Formats.DATE_SHORT, opts = {}) {
-    return this.isValid
-      ? Formatter.create(this.s.loc.clone(opts), formatOpts).formatInterval(this)
-      : INVALID;
+    return this.isValid ? Formatter.create(this.s.loc.clone(opts), formatOpts).formatInterval(this) : INVALID;
   }
 
   /**
@@ -651,7 +650,7 @@ export default class Interval {
    * representations.
    * @return {string}
    */
-  toFormat(dateFormat, { separator = " – " } = {}) {
+  toFormat(dateFormat, { separator = ' – ' } = {}) {
     if (!this.isValid) return INVALID;
     return `${this.s.toFormat(dateFormat)}${separator}${this.e.toFormat(dateFormat)}`;
   }
