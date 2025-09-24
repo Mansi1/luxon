@@ -9,22 +9,15 @@ module.exports = {
   // Specify the test environment
   testEnvironment: 'node',
 
-  // Specify which files to test (both .js and .ts)
-  testMatch: ['<rootDir>/test/**/*.test.js'],
+  // Specify which files to test (both .ts)
+  testMatch: ['<rootDir>/src/**/*.test.ts'],
 
-  // Collect coverage from both .js and .ts files
-  collectCoverageFrom: ['src/**/*.js', '!src/zone.js'],
+  // Collect coverage from both  .ts files
+  collectCoverageFrom: ['src/**/*.ts', '!src/zone.js'],
 
   // You can also add more configurations like this to work around issues
   // with modules that don't export in CommonJS
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-  },
-
-  // Ensure ts-jest can find your tsconfig.json
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json',
-    },
   },
 };

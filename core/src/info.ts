@@ -1,10 +1,11 @@
-import DateTime from "./datetime.js";
-import Settings from "./settings.js";
-import Locale from "./impl/locale.js";
-import IANAZone from "./zones/IANAZone.js";
-import { normalizeZone } from "./impl/zoneUtil.js";
+import DateTime from './datetime.js';
+import Settings from './settings.js';
+import Locale from './impl/locale.js';
+import IANAZone from './zones/IANAZone.js';
+import { normalizeZone } from './impl/zoneUtil.js';
 
-import { hasLocaleWeekInfo, hasRelative } from "./impl/util.js";
+import Zone from './zone.js';
+import { hasIntlFeatureRelativeTimeFormat, hasIntlFeauteLocaleWeekInfo } from './util/checkFeatures.js';
 
 /**
  * The Info class contains static methods for retrieving general time and date related data. For example, it has methods for finding out if a time zone has a DST, for listing the months in any supported locale, and for discovering which of Luxon features are available in the current environment.
@@ -26,7 +27,7 @@ export default class Info {
    * @param {string} zone - Zone to check
    * @return {boolean}
    */
-  static isValidIANAZone(zone) {
+  static isValidIANAZone(zone: string) {
     return IANAZone.isValidZone(zone);
   }
 
@@ -44,7 +45,7 @@ export default class Info {
    * @param {string|Zone|number} [input] - the value to be converted
    * @return {Zone}
    */
-  static normalizeZone(input) {
+  static normalizeZone(input: string | Zone | number) {
     return normalizeZone(input, Settings.defaultZone);
   }
 
@@ -101,8 +102,8 @@ export default class Info {
    * @return {Array}
    */
   static months(
-    length = "long",
-    { locale = null, numberingSystem = null, locObj = null, outputCalendar = "gregory" } = {}
+    length = 'long',
+    { locale = null, numberingSystem = null, locObj = null, outputCalendar = 'gregory' } = {}
   ) {
     return (locObj || Locale.create(locale, numberingSystem, outputCalendar)).months(length);
   }
@@ -121,8 +122,8 @@ export default class Info {
    * @return {Array}
    */
   static monthsFormat(
-    length = "long",
-    { locale = null, numberingSystem = null, locObj = null, outputCalendar = "gregory" } = {}
+    length = 'long',
+    { locale = null, numberingSystem = null, locObj = null, outputCalendar = 'gregory' } = {}
   ) {
     return (locObj || Locale.create(locale, numberingSystem, outputCalendar)).months(length, true);
   }
@@ -141,7 +142,7 @@ export default class Info {
    * @example Info.weekdays('short', { locale: 'ar' })[0] //=> 'الاثنين'
    * @return {Array}
    */
-  static weekdays(length = "long", { locale = null, numberingSystem = null, locObj = null } = {}) {
+  static weekdays(length = 'long', { locale = null, numberingSystem = null, locObj = null } = {}) {
     return (locObj || Locale.create(locale, numberingSystem, null)).weekdays(length);
   }
 
@@ -157,10 +158,7 @@ export default class Info {
    * @param {string} [opts.locObj=null] - an existing locale object to use
    * @return {Array}
    */
-  static weekdaysFormat(
-    length = "long",
-    { locale = null, numberingSystem = null, locObj = null } = {}
-  ) {
+  static weekdaysFormat(length = 'long', { locale = null, numberingSystem = null, locObj = null } = {}) {
     return (locObj || Locale.create(locale, numberingSystem, null)).weekdays(length, true);
   }
 
@@ -186,8 +184,8 @@ export default class Info {
    * @example Info.eras('long', { locale: 'fr' }) //=> [ 'avant Jésus-Christ', 'après Jésus-Christ' ]
    * @return {Array}
    */
-  static eras(length = "short", { locale = null } = {}) {
-    return Locale.create(locale, null, "gregory").eras(length);
+  static eras(length = 'short', { locale = null } = {}) {
+    return Locale.create(locale, null, 'gregory').eras(length);
   }
 
   /**
@@ -200,6 +198,6 @@ export default class Info {
    * @return {Object}
    */
   static features() {
-    return { relative: hasRelative(), localeWeek: hasLocaleWeekInfo() };
+    return { relative: hasIntlFeatureRelativeTimeFormat(), localeWeek: hasIntlFeauteLocaleWeekInfo() };
   }
 }

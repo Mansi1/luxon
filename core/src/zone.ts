@@ -1,4 +1,3 @@
-import { ZoneIsAbstractError } from './errors';
 import { padStart } from './impl/util';
 
 export type TimeZoneNameFormat = 'short' | 'long';
@@ -16,10 +15,7 @@ export interface ZoneOffsetOptions {
   locale: string;
 }
 
-/**
- * @interface
- */
-export default class Zone {
+export default abstract class Zone {
   /**
    * Returns the offset's value as a string
    * @param {number} ts - Epoch milliseconds for which to get the offset
@@ -49,26 +45,20 @@ export default class Zone {
   }
   /**
    * The type of zone
-   * @abstract
    * @type {string}
    */
-  get type(): string {
-    throw new ZoneIsAbstractError();
-  }
+  abstract get type(): string;
 
   /**
    * The name of this zone.
    * @abstract
    * @type {string}
    */
-  get name(): string {
-    throw new ZoneIsAbstractError();
-  }
+  abstract get name(): string;
 
   /**
    * The IANA name of this zone.
    * Defaults to `name` if not overwritten by a subclass.
-   * @abstract
    * @type {string}
    */
   get ianaName(): string {
@@ -80,9 +70,7 @@ export default class Zone {
    * @abstract
    * @type {boolean}
    */
-  get isUniversal(): boolean {
-    throw new ZoneIsAbstractError();
-  }
+  abstract get isUniversal(): boolean;
 
   /**
    * Returns the offset's common name (such as EST) at the specified timestamp
@@ -93,10 +81,7 @@ export default class Zone {
    * @param {string} opts.locale - What locale to return the offset name in.
    * @return {string}
    */
-  offsetName(ts: number, opts?: Partial<ZoneOffsetOptions>): string | null {
-    throw new ZoneIsAbstractError();
-  }
-
+  abstract offsetName(ts: number, opts?: Partial<ZoneOffsetOptions>): string | null;
   /**
    * Returns the offset's value as a string
    * @abstract
@@ -105,36 +90,26 @@ export default class Zone {
    *                          Accepts 'narrow', 'short', or 'techie'. Returning '+6', '+06:00', or '+0600' respectively
    * @return {string}
    */
-  formatOffset(ts: number, format: OffsetFormat): string {
-    throw new ZoneIsAbstractError();
-  }
+  abstract formatOffset(ts: number, format: OffsetFormat): string;
 
   /**
    * Return the offset in minutes for this zone at the specified timestamp.
-   * @abstract
    * @param {number} ts - Epoch milliseconds for which to compute the offset
    * @return {number}
    */
-  offset(ts: number): number {
-    throw new ZoneIsAbstractError();
-  }
+  abstract offset(ts: number): number;
 
   /**
    * Return whether this Zone is equal to another zone
-   * @abstract
    * @param {Zone} otherZone - the zone to compare
    * @return {boolean}
    */
-  equals(otherZone: Zone): boolean {
-    throw new ZoneIsAbstractError();
-  }
+  abstract equals(otherZone: Zone): boolean;
 
   /**
    * Return whether this Zone is valid.
    * @abstract
    * @type {boolean}
    */
-  get isValid(): boolean {
-    throw new ZoneIsAbstractError();
-  }
+  abstract get isValid(): boolean;
 }

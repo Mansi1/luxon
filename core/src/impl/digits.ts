@@ -20,7 +20,9 @@ const numberingSystems = {
   thai: '[\u0E50-\u0E59]',
   tibt: '[\u0F20-\u0F29]',
   latn: '\\d',
-};
+} as const;
+
+export type NumberingSystem = keyof typeof numberingSystems;
 
 const numberingSystemsUTF16 = {
   arab: [1632, 1641],
@@ -42,11 +44,11 @@ const numberingSystemsUTF16 = {
   telu: [3174, 3183],
   thai: [3664, 3673],
   tibt: [3872, 3881],
-};
+} as const;
 
 const hanidecChars = numberingSystems.hanidec.replace(/[\[|\]]/g, '').split('');
 
-export function parseDigits(str) {
+export function parseDigits(str: string) {
   const value = parseInt(str, 10);
   if (isNaN(value)) {
     let newValue = '';
@@ -56,7 +58,7 @@ export function parseDigits(str) {
       if (str[i].search(numberingSystems.hanidec) !== -1) {
         newValue += hanidecChars.indexOf(str[i]);
       } else {
-        for (const key in numberingSystemsUTF16) {
+        for (const key of Object.keys(numberingSystemsUTF16) as Array<keyof typeof numberingSystemsUTF16>) {
           const [min, max] = numberingSystemsUTF16[key];
           if (code >= min && code <= max) {
             newValue += code - min;
@@ -76,7 +78,7 @@ export function resetDigitRegexCache() {
   digitRegexCache.clear();
 }
 
-export function digitRegex({ numberingSystem }, append = '') {
+export function digitRegex({ numberingSystem }: { numberingSystem: NumberingSystem }, append = '') {
   const ns = numberingSystem || 'latn';
 
   let appendCache = digitRegexCache.get(ns);

@@ -3,10 +3,10 @@ import IANAZone from '../zones/IANAZone';
 import FixedOffsetZone from '../zones/fixedOffsetZone';
 import InvalidZone from '../zones/invalidZone';
 
-import { isUndefined, isString, isNumber, isNull } from './util';
+import { isUndefined, isString, isNumber, isNull } from '../util/guards';
 import SystemZone from '../zones/systemZone';
 
-export const normalizeZone = (input: Zone | string | undefined, defaultZone: Zone): Zone => {
+export const normalizeZone = (input: Zone | string | number | undefined, defaultZone: Zone): Zone => {
   if (isUndefined(input) || isNull(input)) {
     return defaultZone;
   }
@@ -31,12 +31,6 @@ export const normalizeZone = (input: Zone | string | undefined, defaultZone: Zon
   }
 
   if (Zone.isZone(input)) {
-    return input;
-  }
-
-  if (typeof input === 'object' && 'offset' in input && typeof input.offset === 'function') {
-    // This is dumb, but the instanceof check above doesn't seem to really work
-    // so we're duck checking it ??? WTF
     return input;
   }
 

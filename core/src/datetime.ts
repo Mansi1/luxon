@@ -1,4 +1,4 @@
-import Duration from './duration';
+import Duration, { DurationLikeUnit, DurationUnit } from './duration';
 import Interval from './interval';
 import Settings from './settings';
 import Info from './info';
@@ -7,7 +7,6 @@ import FixedOffsetZone from './zones/fixedOffsetZone';
 import Locale from './impl/locale';
 import {
   isUndefined,
-  maybeArray,
   isDate,
   isNumber,
   bestBy,
@@ -46,6 +45,7 @@ import * as Formats from './impl/formats';
 import { InvalidArgumentError, ConflictingSpecificationError, InvalidUnitError, InvalidDateTimeError } from './errors';
 import Invalid from './impl/invalid';
 import Zone from './zone.js';
+import { ensureArray } from './util/ensureArray';
 
 const INVALID = 'Invalid DateTime';
 const MAX_DATE = 8.64e15;
@@ -2185,14 +2185,14 @@ export default class DateTime {
    * i2.diff(i1, ['months', 'days', 'hours']).toObject() //=> { months: 16, days: 19, hours: 0.75 }
    * @return {Duration}
    */
-  diff(otherDateTime: DateTime, unit = 'milliseconds', opts = {}) {
+  diff(otherDateTime: DateTime, unit: DurationLikeUnit = 'milliseconds', opts = {}) {
     if (!this.isValid || !otherDateTime.isValid) {
       return Duration.invalid('created by diffing an invalid DateTime');
     }
 
     const durOpts = { locale: this.locale, numberingSystem: this.numberingSystem, ...opts };
 
-    const units = maybeArray(unit).map(Duration.normalizeUnit),
+    const units = ensureArray(unit).map(Duration.normalizeUnit),
       otherIsLater = otherDateTime.valueOf() > this.valueOf(),
       earlier = otherIsLater ? this : otherDateTime,
       later = otherIsLater ? otherDateTime : this,

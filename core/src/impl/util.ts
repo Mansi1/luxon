@@ -9,58 +9,9 @@ import Settings from '../settings';
 import { TimeZoneNameFormat } from '../zone';
 import { dayOfWeek, isoWeekdayToLocal } from './conversions';
 
-export type integer = number & { __type: 'integer' };
-
-export function isUndefined(o: unknown): o is undefined {
-  return typeof o === 'undefined';
-}
-
-export function isNull(o: unknown): o is null {
-  return typeof o === null;
-}
-export function isNumber(o: unknown): o is number {
-  return typeof o === 'number';
-}
-
-export function isInteger(o: unknown): o is integer {
-  return typeof o === 'number' && o % 1 === 0;
-}
-
-export function isString(o: unknown): o is string {
-  return typeof o === 'string';
-}
-
-export function isDate(o: unknown): o is Date {
-  return Object.prototype.toString.call(o) === '[object Date]';
-}
-
 // CAPABILITIES
 
-export function hasRelative(): boolean {
-  try {
-    return typeof Intl !== 'undefined' && !!Intl.RelativeTimeFormat;
-  } catch (e) {
-    return false;
-  }
-}
-
-export function hasLocaleWeekInfo(): boolean {
-  try {
-    return (
-      typeof Intl !== 'undefined' &&
-      !!Intl.Locale &&
-      ('weekInfo' in Intl.Locale.prototype || 'getWeekInfo' in Intl.Locale.prototype)
-    );
-  } catch (e) {
-    return false;
-  }
-}
-
 // OBJECTS AND ARRAYS
-
-export function maybeArray(thing) {
-  return Array.isArray(thing) ? thing : [thing];
-}
 
 export function bestBy(arr, by, compare) {
   if (arr.length === 0) {
@@ -78,14 +29,7 @@ export function bestBy(arr, by, compare) {
   }, null)[1];
 }
 
-export function pick(obj, keys) {
-  return keys.reduce((a, k) => {
-    a[k] = obj[k];
-    return a;
-  }, {});
-}
-
-export function hasOwnProperty(obj, prop) {
+export function hasOwnProperty<T, K extends PropertyKey>(obj: T, prop: K): obj is T & Record<K, unknown> {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
@@ -115,7 +59,7 @@ export function validateWeekSettings(settings: WeekSettings) {
 
 // NUMBERS AND STRINGS
 
-export function integerBetween(thing, bottom, top) {
+export function integerBetween(thing: number, bottom: number, top: number) {
   return isInteger(thing) && thing >= bottom && thing <= top;
 }
 
@@ -187,15 +131,15 @@ export const assertNever = (_type: never, message: string): never => {
 
 // DATE BASICS
 
-export function isLeapYear(year) {
+export function isLeapYear(year: number) {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
 
-export function daysInYear(year) {
+export function daysInYear(year: number) {
   return isLeapYear(year) ? 366 : 365;
 }
 
-export function daysInMonth(year, month) {
+export function daysInMonth(year: number, month: number) {
   const modMonth = floorMod(month - 1, 12) + 1,
     modYear = year + (month - modMonth) / 12;
 
@@ -270,7 +214,7 @@ export function parseZoneInfo(
 }
 
 // signedOffset('-5', '30') -> -330
-export function signedOffset(offHourStr, offMinuteStr) {
+export function signedOffset(offHourStr: string, offMinuteStr: string) {
   let offHour = parseInt(offHourStr, 10);
 
   // don't || this because we want to preserve -0
@@ -302,8 +246,4 @@ export function normalizeObject(obj, normalizer) {
     }
   }
   return normalized;
-}
-
-export function timeObject(obj) {
-  return pick(obj, ['hour', 'minute', 'second', 'millisecond']);
 }

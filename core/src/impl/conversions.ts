@@ -1,18 +1,15 @@
-import {
-  integerBetween,
-  isLeapYear,
-  timeObject,
-  daysInYear,
-  daysInMonth,
-  weeksInWeekYear,
-  isInteger,
-  isUndefined,
-} from './util.js';
+import { integerBetween, isLeapYear, daysInYear, daysInMonth, weeksInWeekYear } from './util.js';
 import Invalid from './invalid.js';
 import { ConflictingSpecificationError } from '../errors.js';
+import { pick } from '../util/pick.js';
+import { isInteger, isUndefined } from '../util/guards.js';
 
 const nonLeapLadder = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
   leapLadder = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+
+export function timeObject(obj) {
+  return pick(obj, ['hour', 'minute', 'second', 'millisecond']);
+}
 
 function unitOutOfRange(unit, value) {
   return new Invalid(

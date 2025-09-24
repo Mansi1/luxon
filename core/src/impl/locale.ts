@@ -1,10 +1,11 @@
-import { hasLocaleWeekInfo, hasRelative, integerBetween, padStart, roundTo, validateWeekSettings } from './util.js';
-import { Cache } from './cache';
+import { integerBetween, padStart, roundTo, validateWeekSettings } from './util.js';
+import { Cache, ClearCache, SimpleCache, SingeltonCache, StringSimpleCache } from './cache';
 import * as English from './english.js';
 import Settings, { WeekSettings } from '../settings.js';
 import DateTime from '../datetime.js';
 import IANAZone from '../zones/IANAZone.js';
 import { InvalidArgumentError } from '../errors.js';
+import { hasIntlFeatureRelativeTimeFormat, hasIntlFeauteLocaleWeekInfo } from '../util/checkFeatures.js';
 
 export type WeedInfo = {
   firstDay: number;
@@ -17,33 +18,30 @@ type LocalOption<Option> = {
   opts?: Option;
 };
 
-const caches: Array<{ clear: () => void }> = [];
+const caches: Array<ClearCache> = [];
+const onCreateListener = (cache: ClearCache) => {
+  caches.push(cache);
+};
 
-const getCachedLF = new Cache<Intl.ListFormat, LocalOption<Intl.ListFormatOptions>>(
+const getCachedLF = new SimpleCache<Intl.ListFormat, LocalOption<Intl.ListFormatOptions>>(
   ({ locale, opts = {} }) => JSON.stringify([locale, opts]),
   ({ locale, opts = {} }) => new Intl.ListFormat(locale, opts),
-  (cache) => {
-    caches.push(cache);
-  }
+  onCreateListener
 ).getAndSet;
 
-const getCachedDTF = new Cache<Intl.DateTimeFormat, { locale: string; opts?: Intl.DateTimeFormatOptions }>(
+const getCachedDTF = new SimpleCache<Intl.DateTimeFormat, { locale: string; opts?: Intl.DateTimeFormatOptions }>(
   ({ locale, opts = {} }) => JSON.stringify([locale, opts]),
   ({ locale, opts = {} }) => new Intl.DateTimeFormat(locale, opts),
-  (cache) => {
-    caches.push(cache);
-  }
+  onCreateListener
 ).getAndSet;
 
-const getCachedINF = new Cache<Intl.NumberFormat, LocalOption<Intl.NumberFormatOptions>>(
+const getCachedINF = new SimpleCache<Intl.NumberFormat, LocalOption<Intl.NumberFormatOptions>>(
   ({ locale, opts = {} }) => JSON.stringify([locale, opts]),
   ({ locale, opts = {} }) => new Intl.NumberFormat(locale, opts),
-  (cache) => {
-    caches.push(cache);
-  }
+  onCreateListener
 ).getAndSet;
 
-const getCachedRTF = new Cache<Intl.RelativeTimeFormat, LocalOption<Intl.RelativeTimeFormatOptions>>(
+const getCachedRTF = new SimpleCache<Intl.RelativeTimeFormat, LocalOption<Intl.RelativeTimeFormatOptions>>(
   ({ locale, opts = {} }) => {
     //@ts-expect-error fixme
     const { base, ...cacheKeyOpts } = opts;
@@ -51,45 +49,30 @@ const getCachedRTF = new Cache<Intl.RelativeTimeFormat, LocalOption<Intl.Relativ
     return JSON.stringify([locale, cacheKeyOpts]);
   },
   ({ locale, opts = {} }) => new Intl.RelativeTimeFormat(locale, opts),
-  (cache) => {
-    caches.push(cache);
-  }
+  onCreateListener
 ).getAndSet;
 
-const getCachedIntResolvedOptions = new Cache<Intl.ResolvedDateTimeFormatOptions, string>(
-  (locString) => locString,
+const getCachedIntResolvedOptions = new StringSimpleCache<Intl.ResolvedDateTimeFormatOptions>(
   (locString) => new Intl.DateTimeFormat(locString).resolvedOptions(),
-  (cache) => {
-    caches.push(cache);
-  }
+  onCreateListener
 ).getAndSet;
 
-const getCachedWeekInfo = new Cache<WeedInfo, string>(
-  (locString) => locString,
-  (locString) => {
-    const locale = new Intl.Locale(locString);
-    // browsers currently implement this as a property, but spec says it should be a getter function
-    //@ts-expect-error fixme
-    let data = 'getWeekInfo' in locale ? locale.getWeekInfo() : locale.weekInfo;
-    // minimalDays was removed from WeekInfo: https://github.com/tc39/proposal-intl-locale-info/issues/86
-    if (!('minimalDays' in data)) {
-      data = { ...fallbackWeekSettings, ...data };
-    }
-    return data;
-  },
-  (cache) => {
-    caches.push(cache);
+const getCachedWeekInfo = new StringSimpleCache<WeedInfo>((locString) => {
+  const locale = new Intl.Locale(locString);
+  // browsers currently implement this as a property, but spec says it should be a getter function
+  //@ts-expect-error fixme
+  let data = 'getWeekInfo' in locale ? locale.getWeekInfo() : locale.weekInfo;
+  // minimalDays was removed from WeekInfo: https://github.com/tc39/proposal-intl-locale-info/issues/86
+  if (!('minimalDays' in data)) {
+    data = { ...fallbackWeekSettings, ...data };
   }
-).getAndSet;
+  return data;
+}, onCreateListener).getAndSet;
 
-const systemLocale = () =>
-  new Cache<string, 'static'>(
-    () => 'static',
-    () => new Intl.DateTimeFormat().resolvedOptions().locale,
-    (cache) => {
-      caches.push(cache);
-    }
-  ).getAndSet('static');
+const systemLocale = new SingeltonCache<string>(
+  () => new Intl.DateTimeFormat().resolvedOptions().locale,
+  onCreateListener
+).getAndSet;
 
 function parseLocaleString(localeStr: string) {
   // I really want to avoid writing a BCP 47 parser
@@ -212,7 +195,7 @@ class PolyNumberFormatter {
     }
   }
 
-  format(i) {
+  format(i: number): string {
     if (this.inf) {
       const fixed = this.floor ? Math.floor(i) : i;
       return this.inf.format(fixed);
@@ -325,7 +308,7 @@ class PolyRelFormatter {
 
   constructor(intl: string, isEnglish: boolean, opts: Intl.RelativeTimeFormatOptions) {
     this.opts = { style: 'long', ...opts };
-    if (!isEnglish && hasRelative()) {
+    if (!isEnglish && hasIntlFeatureRelativeTimeFormat()) {
       this.rtf = getCachedRTF({ locale: intl, opts });
     }
   }
@@ -414,8 +397,8 @@ export default class Locale {
     return Locale.create(locale, numberingSystem, outputCalendar, weekSettings);
   }
 
-  private locale;
-  private numberingSystem;
+  public locale: string;
+  public numberingSystem: string;
   private outputCalendar;
   private weekSettings;
   private intl: string;
@@ -585,7 +568,7 @@ export default class Locale {
   getWeekSettings() {
     if (this.weekSettings) {
       return this.weekSettings;
-    } else if (!hasLocaleWeekInfo()) {
+    } else if (!hasIntlFeauteLocaleWeekInfo()) {
       return fallbackWeekSettings;
     } else {
       return getCachedWeekInfo(this.locale);

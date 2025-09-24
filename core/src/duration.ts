@@ -1,20 +1,46 @@
-import { InvalidArgumentError, InvalidDurationError, InvalidUnitError } from './errors.js';
-import Formatter from './impl/formatter.js';
-import Invalid from './impl/invalid.js';
-import Locale from './impl/locale.js';
-import { parseISODuration, parseISOTimeOnly } from './impl/regexParser.js';
-import { asNumber, hasOwnProperty, isNumber, isUndefined, normalizeObject, roundTo } from './impl/util.js';
-import Settings from './settings.js';
-import DateTime from './datetime.js';
+import { InvalidArgumentError, InvalidDurationError, InvalidUnitError } from './errors';
+import Formatter from './impl/formatter';
+import Invalid from './impl/invalid';
+import Locale from './impl/locale';
+import { parseISODuration, parseISOTimeOnly } from './impl/regexParser';
+import { asNumber, hasOwnProperty, normalizeObject, roundTo } from './impl/util';
+import Settings from './settings';
+import DateTime from './datetime';
+import { NumberingSystem } from './impl/digits.js';
+import { isNumber, isUndefined } from './util/guards';
+import { Objects } from './util/Objects';
 
 const INVALID = 'Invalid Duration';
 
 export interface DurationOptions {
-  locale?: string | undefined;
-  numberingSystem?: NumberingSystem | undefined;
-  conversionAccuracy?: ConversionAccuracy | undefined;
+  locale?: string;
+  numberingSystem?: NumberingSystem;
+  conversionAccuracy?: ConversionAccuracy;
   matrix?: Matrix;
 }
+export interface DurationConfig {
+  loc?: Locale;
+  conversionAccuracy?: ConversionAccuracy;
+  matrix?: Matrix;
+  invalid?: Invalid;
+
+  values: DurationObjectUnits;
+}
+
+export interface ToHumanDurationOptions extends Intl.ListFormatOptions {
+  /**
+   * How to format the merged list.
+   * Corresponds to the `style` property of the options parameter of the native `Intl.ListFormat` constructor.
+   * @default 'narrow'
+   */
+  listStyle?: 'long' | 'short' | 'narrow';
+  /**
+   * Show all units previously used by the duration even if they are zero.
+   * @default true
+   */
+  showZeros?: boolean;
+}
+
 export interface DurationObjectUnits {
   years?: number;
   quarters?: number;
@@ -196,14 +222,18 @@ const orderedUnits = [
   'milliseconds',
 ] as const satisfies Array<DurationLikeUnit>;
 
-// This is a map of which units to convert
-// for toHuman due to missing support from Intl.
-// if value is set, then key is what to convert to and value is what to convert
-// if value is null, then key is a unit to be ignored
-const humanizeUnitConversion = {
-  months: 'quarters',
-  quarters: null,
-};
+export interface DurationFormatOptions {
+  /**
+   * Whether or not to floor numerical values.
+   * @default true
+   */
+  floor?: boolean;
+  /**
+   * How to handle signs
+   * @default 'negative'
+   */
+  signMode?: 'negative' | 'all' | 'negativeLargestOnly';
+}
 
 function durationToMillis(matrix: Matrix, vals: DurationObjectUnits): number {
   let sum = 0;
@@ -276,7 +306,7 @@ export default class Duration {
   private matrix;
   private isLuxonDuration: boolean;
 
-  constructor(config) {
+  constructor(config: DurationConfig) {
     const accurate = config.conversionAccuracy === 'longterm' || false;
     let matrix = accurate ? accurateMatrix : casualMatrix;
 
@@ -432,7 +462,7 @@ export default class Duration {
     if (Settings.throwOnInvalid) {
       throw new InvalidDurationError(invalid);
     } else {
-      return new Duration({ invalid });
+      return new Duration({ invalid, values: {} });
     }
   }
 
@@ -477,19 +507,23 @@ export default class Duration {
 
   /**
    * Get  the locale of a Duration, such 'en-GB'
-   * @type {string}
    */
   get locale() {
-    return this.isValid ? this.loc?.locale ?? null : null;
+    if (!this.isValid) {
+      return null;
+    }
+    return this.loc?.locale ?? null;
   }
 
   /**
    * Get the numbering system of a Duration, such 'beng'. The numbering system is used when formatting the Duration
    *
-   * @type {string}
    */
-  get numberingSystem() {
-    return this.isValid ? this.loc.numberingSystem : null;
+  get numberingSystem(): string | null {
+    if (!this.isValid) {
+      return null;
+    }
+    return this.loc?.numberingSystem ?? null;
   }
 
   private clone(
@@ -502,9 +536,9 @@ export default class Duration {
     }>,
     useAlternatValues = false
   ): Duration {
-    const conf = {
+    const conf: DurationConfig = {
       values: useAlternatValues
-        ? alternateDuration.values
+        ? { ...alternateDuration.values }
         : { ...duration.values, ...(alternateDuration.values || {}) },
       loc: duration.loc?.clone(alternateDuration.loc),
       conversionAccuracy: alternateDuration.conversionAccuracy || duration.conversionAccuracy,
@@ -538,14 +572,19 @@ export default class Duration {
    * @example Duration.fromObject({ days: -6, seconds: -2 }).toFormat("d s", { signMode: "negativeLargestOnly" }) //=> "-6 2"
    * @return {string}
    */
-  toFormat(fmt, opts = {}) {
+  toFormat(fmt: string, opts: DurationFormatOptions = {}): string {
     // reverse-compat since 1.2; we always round down now, never up, and we do it by default
     const fmtOpts = {
       ...opts,
-      floor: opts.round !== false && opts.floor !== false,
+      floor: opts.floor !== false,
     };
     return this.isValid ? Formatter.create(this.loc, fmtOpts).formatDurationFromString(this, fmt) : INVALID;
   }
+
+  private static humanizeUnitConversion = {
+    months: 'quarters',
+    quarters: null,
+  } as const;
 
   /**
    * Returns a string representation of a Duration with all units included.
@@ -563,32 +602,37 @@ export default class Duration {
    * dur.toHuman({ showZeros: false }) //=> '1 month, 5 hours, 6 minutes'
    * ```
    */
-  toHuman(opts = {}) {
+  toHuman(opts: ToHumanDurationOptions = {}) {
     if (!this.isValid) return INVALID;
 
     const showZeros = opts.showZeros !== false;
 
-    const l = orderedUnits
+    const humanizeUnitConversionEntries = Objects.entries(Duration.humanizeUnitConversion);
+
+    const list = orderedUnits
       .map((unit) => {
-        const convertUnit = humanizeUnitConversion[unit];
+        const [newUnit, convertUnit] = humanizeUnitConversionEntries.find(([key]) => key === unit) ?? [
+          undefined,
+          undefined,
+        ];
         if (convertUnit === null) return null;
         let val = this.values[unit];
         if (convertUnit) {
           const val2 = this.values[convertUnit];
           if (val2) {
-            val = (val ?? 0) + val2 * this.matrix[convertUnit][unit];
+            val = (val ?? 0) + val2 * this.matrix[convertUnit][newUnit];
           }
         }
         if (isUndefined(val) || (val === 0 && !showZeros)) {
           return null;
         }
         return this.loc
-          .numberFormatter({ style: 'unit', unitDisplay: 'long', ...opts, unit: unit.slice(0, -1) })
+          ?.numberFormatter({ style: 'unit', unitDisplay: 'long', ...opts, unit: unit.slice(0, -1) })
           .format(val);
       })
-      .filter((n) => n);
+      .filter((n): n is string => !!n);
 
-    return this.loc.listFormatter({ type: 'conjunction', style: opts.listStyle || 'narrow', ...opts }).format(l);
+    return this.loc?.listFormatter({ type: 'conjunction', style: opts.listStyle ?? 'narrow', ...opts }).format(list);
   }
 
   /**
@@ -751,11 +795,14 @@ export default class Duration {
    * @example Duration.fromObject({ hours: 1, minutes: 30 }).mapUnits((x, u) => u === "hours" ? x * 2 : x) //=> { hours: 2, minutes: 30 }
    * @return {Duration}
    */
-  mapUnits(fn) {
+  mapUnits(fn: (value: number, key: DurationUnit) => number): Duration {
     if (!this.isValid) return this;
-    const result = {};
-    for (const k of Object.keys(this.values)) {
-      result[k] = asNumber(fn(this.values[k], k));
+    const result: DurationObjectUnits = {};
+    for (const k of orderedUnits) {
+      const value = this.values[k];
+      if (typeof value !== 'undefined') {
+        result[k] = asNumber(fn(value, k));
+      }
     }
     return this.clone(this, { values: result }, true);
   }
@@ -769,7 +816,7 @@ export default class Duration {
    * @return {number}
    */
   get(unit: DurationLikeUnit): number {
-    return this.values[Duration.normalizeUnit(unit)] ?? 0;
+    return this[Duration.normalizeUnit(unit)] ?? 0;
   }
 
   /**
@@ -779,7 +826,7 @@ export default class Duration {
    * @example dur.set({ hours: 8, minutes: 30 })
    * @return {Duration}
    */
-  set(values) {
+  set(values: DurationObjectUnits) {
     if (!this.isValid) return this;
 
     const mixed = { ...this.values, ...normalizeObject(values, Duration.normalizeUnit) };
@@ -849,7 +896,7 @@ export default class Duration {
   shiftTo(...units: DurationLikeUnit[]) {
     if (!this.isValid) return this;
 
-    if (units.length === 0) {
+    /* if (units.length === 0) {
       return this;
     }
 
@@ -898,7 +945,8 @@ export default class Duration {
     }
 
     const normalizedBuild = normalizeValues(this.matrix, built);
-    return this.clone(this, { values: normalizedBuild }, true);
+    return this.clone(this, { values: normalizedBuild }, true);*/
+    throw new Error('Implement me');
   }
 
   /**
@@ -1000,6 +1048,7 @@ export default class Duration {
   /**
    * Get the seconds.
    * @return {number}
+   *
    */
   get seconds() {
     return this.isValid ? this.values.seconds || 0 : NaN;
@@ -1024,10 +1073,12 @@ export default class Duration {
 
   /**
    * Returns an error code if this Duration became invalid, or null if the Duration is valid
-   * @return {string}
    */
   get invalidReason() {
-    return this.invalid ? this.invalid.reason : null;
+    if (this.invalid) {
+      return this.invalid.reason;
+    }
+    return null;
   }
 
   /**
@@ -1035,7 +1086,10 @@ export default class Duration {
    * @type {string}
    */
   get invalidExplanation() {
-    return this.invalid ? this.invalid.explanation : null;
+    if (this.invalid) {
+      return this.invalid.explanation;
+    }
+    return null;
   }
 
   /**
@@ -1044,23 +1098,30 @@ export default class Duration {
    * @param {Duration} other
    * @return {boolean}
    */
-  equals(other) {
+  equals(other: Duration): boolean {
+    if (!(other instanceof Duration)) {
+      return false;
+    }
+
     if (!this.isValid || !other.isValid) {
       return false;
     }
 
-    if (!this.loc.equals(other.loc)) {
-      return false;
-    }
-
-    function eq(v1, v2) {
-      // Consider 0 and undefined as equal
-      if (v1 === undefined || v1 === 0) return v2 === undefined || v2 === 0;
-      return v1 === v2;
+    if (this.loc === null) {
+      if (other.loc !== null) {
+        return false;
+      }
+    } else {
+      if (!this.loc.equals(other.loc)) {
+        return false;
+      }
     }
 
     for (const u of orderedUnits) {
-      if (!eq(this.values[u], other.values[u])) {
+      const value = this.values[u] ?? 0;
+      const otherValue = other.values[u] ?? 0;
+
+      if (!(value !== otherValue)) {
         return false;
       }
     }
