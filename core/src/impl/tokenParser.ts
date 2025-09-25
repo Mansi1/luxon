@@ -9,6 +9,11 @@ import Locale from './locale.js';
 
 const MISSING_FTP = 'missing Intl.DateTimeFormat.formatToParts support';
 
+export type Token = {
+  literal: boolean;
+  val: string;
+};
+
 function intUnit(regex, post = (i) => i) {
   return { regex, deser: ([s]) => post(parseDigits(s)) };
 }

@@ -1,7 +1,7 @@
-import * as Formats from './formats.js';
-import { pick } from './util.js';
+import { pick } from '../util/pick';
+import * as Formats from './formats';
 
-function stringify(obj) {
+function stringify<T extends object>(obj: T): string {
   return JSON.stringify(obj, Object.keys(obj).sort());
 }
 

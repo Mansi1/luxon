@@ -1,9 +1,9 @@
-import * as English from "./english.js";
-import * as Formats from "./formats.js";
-import { padStart } from "./util.js";
+import * as English from './english.js';
+import * as Formats from './formats.js';
+import { padStart } from './util.js';
 
-function stringifyTokens(splits, tokenToString) {
-  let s = "";
+function stringifyTokens(splits: Array<Token>, tokenToString: (tokenValue: string) => string) {
+  let s = '';
   for (const token of splits) {
     if (token.literal) {
       s += token.val;
@@ -46,14 +46,14 @@ export default class Formatter {
     return new Formatter(locale, opts);
   }
 
-  static parseFormat(fmt) {
+  static parseFormat(fmt: string): Array<Token> {
     // white-space is always considered a literal in user-provided formats
     // the " " token has a special meaning (see unitForToken)
 
     let current = null,
-      currentFull = "",
+      currentFull = '',
       bracketed = false;
-    const splits = [];
+    const splits: Array<Token> = [];
     for (let i = 0; i < fmt.length; i++) {
       const c = fmt.charAt(i);
       if (c === "'") {
@@ -61,11 +61,11 @@ export default class Formatter {
         if (currentFull.length > 0 || bracketed) {
           splits.push({
             literal: bracketed || /^\s+$/.test(currentFull),
-            val: currentFull === "" ? "'" : currentFull,
+            val: currentFull === '' ? "'" : currentFull,
           });
         }
         current = null;
-        currentFull = "";
+        currentFull = '';
         bracketed = !bracketed;
       } else if (bracketed) {
         currentFull += c;
@@ -145,31 +145,26 @@ export default class Formatter {
   }
 
   formatDateTimeFromString(dt, fmt) {
-    const knownEnglish = this.loc.listingMode() === "en",
-      useDateTimeFormatter = this.loc.outputCalendar && this.loc.outputCalendar !== "gregory",
+    const knownEnglish = this.loc.listingMode() === 'en',
+      useDateTimeFormatter = this.loc.outputCalendar && this.loc.outputCalendar !== 'gregory',
       string = (opts, extract) => this.loc.extract(dt, opts, extract),
       formatOffset = (opts) => {
         if (dt.isOffsetFixed && dt.offset === 0 && opts.allowZ) {
-          return "Z";
+          return 'Z';
         }
 
-        return dt.isValid ? dt.zone.formatOffset(dt.ts, opts.format) : "";
+        return dt.isValid ? dt.zone.formatOffset(dt.ts, opts.format) : '';
       },
       meridiem = () =>
-        knownEnglish
-          ? English.meridiemForDateTime(dt)
-          : string({ hour: "numeric", hourCycle: "h12" }, "dayperiod"),
+        knownEnglish ? English.meridiemForDateTime(dt) : string({ hour: 'numeric', hourCycle: 'h12' }, 'dayperiod'),
       month = (length, standalone) =>
         knownEnglish
           ? English.monthForDateTime(dt, length)
-          : string(standalone ? { month: length } : { month: length, day: "numeric" }, "month"),
+          : string(standalone ? { month: length } : { month: length, day: 'numeric' }, 'month'),
       weekday = (length, standalone) =>
         knownEnglish
           ? English.weekdayForDateTime(dt, length)
-          : string(
-              standalone ? { weekday: length } : { weekday: length, month: "long", day: "numeric" },
-              "weekday"
-            ),
+          : string(standalone ? { weekday: length } : { weekday: length, month: 'long', day: 'numeric' }, 'weekday'),
       maybeMacro = (token) => {
         const formatOpts = Formatter.macroTokenToFormatOpts(token);
         if (formatOpts) {
@@ -178,193 +173,180 @@ export default class Formatter {
           return token;
         }
       },
-      era = (length) =>
-        knownEnglish ? English.eraForDateTime(dt, length) : string({ era: length }, "era"),
+      era = (length) => (knownEnglish ? English.eraForDateTime(dt, length) : string({ era: length }, 'era')),
       tokenToString = (token) => {
         // Where possible: https://cldr.unicode.org/translation/date-time/date-time-symbols
         switch (token) {
           // ms
-          case "S":
+          case 'S':
             return this.num(dt.millisecond);
-          case "u":
+          case 'u':
           // falls through
-          case "SSS":
+          case 'SSS':
             return this.num(dt.millisecond, 3);
           // seconds
-          case "s":
+          case 's':
             return this.num(dt.second);
-          case "ss":
+          case 'ss':
             return this.num(dt.second, 2);
           // fractional seconds
-          case "uu":
+          case 'uu':
             return this.num(Math.floor(dt.millisecond / 10), 2);
-          case "uuu":
+          case 'uuu':
             return this.num(Math.floor(dt.millisecond / 100));
           // minutes
-          case "m":
+          case 'm':
             return this.num(dt.minute);
-          case "mm":
+          case 'mm':
             return this.num(dt.minute, 2);
           // hours
-          case "h":
+          case 'h':
             return this.num(dt.hour % 12 === 0 ? 12 : dt.hour % 12);
-          case "hh":
+          case 'hh':
             return this.num(dt.hour % 12 === 0 ? 12 : dt.hour % 12, 2);
-          case "H":
+          case 'H':
             return this.num(dt.hour);
-          case "HH":
+          case 'HH':
             return this.num(dt.hour, 2);
           // offset
-          case "Z":
+          case 'Z':
             // like +6
-            return formatOffset({ format: "narrow", allowZ: this.opts.allowZ });
-          case "ZZ":
+            return formatOffset({ format: 'narrow', allowZ: this.opts.allowZ });
+          case 'ZZ':
             // like +06:00
-            return formatOffset({ format: "short", allowZ: this.opts.allowZ });
-          case "ZZZ":
+            return formatOffset({ format: 'short', allowZ: this.opts.allowZ });
+          case 'ZZZ':
             // like +0600
-            return formatOffset({ format: "techie", allowZ: this.opts.allowZ });
-          case "ZZZZ":
+            return formatOffset({ format: 'techie', allowZ: this.opts.allowZ });
+          case 'ZZZZ':
             // like EST
-            return dt.zone.offsetName(dt.ts, { format: "short", locale: this.loc.locale });
-          case "ZZZZZ":
+            return dt.zone.offsetName(dt.ts, { format: 'short', locale: this.loc.locale });
+          case 'ZZZZZ':
             // like Eastern Standard Time
-            return dt.zone.offsetName(dt.ts, { format: "long", locale: this.loc.locale });
+            return dt.zone.offsetName(dt.ts, { format: 'long', locale: this.loc.locale });
           // zone
-          case "z":
+          case 'z':
             // like America/New_York
             return dt.zoneName;
           // meridiems
-          case "a":
+          case 'a':
             return meridiem();
           // dates
-          case "d":
-            return useDateTimeFormatter ? string({ day: "numeric" }, "day") : this.num(dt.day);
-          case "dd":
-            return useDateTimeFormatter ? string({ day: "2-digit" }, "day") : this.num(dt.day, 2);
+          case 'd':
+            return useDateTimeFormatter ? string({ day: 'numeric' }, 'day') : this.num(dt.day);
+          case 'dd':
+            return useDateTimeFormatter ? string({ day: '2-digit' }, 'day') : this.num(dt.day, 2);
           // weekdays - standalone
-          case "c":
+          case 'c':
             // like 1
             return this.num(dt.weekday);
-          case "ccc":
+          case 'ccc':
             // like 'Tues'
-            return weekday("short", true);
-          case "cccc":
+            return weekday('short', true);
+          case 'cccc':
             // like 'Tuesday'
-            return weekday("long", true);
-          case "ccccc":
+            return weekday('long', true);
+          case 'ccccc':
             // like 'T'
-            return weekday("narrow", true);
+            return weekday('narrow', true);
           // weekdays - format
-          case "E":
+          case 'E':
             // like 1
             return this.num(dt.weekday);
-          case "EEE":
+          case 'EEE':
             // like 'Tues'
-            return weekday("short", false);
-          case "EEEE":
+            return weekday('short', false);
+          case 'EEEE':
             // like 'Tuesday'
-            return weekday("long", false);
-          case "EEEEE":
+            return weekday('long', false);
+          case 'EEEEE':
             // like 'T'
-            return weekday("narrow", false);
+            return weekday('narrow', false);
           // months - standalone
-          case "L":
+          case 'L':
             // like 1
-            return useDateTimeFormatter
-              ? string({ month: "numeric", day: "numeric" }, "month")
-              : this.num(dt.month);
-          case "LL":
+            return useDateTimeFormatter ? string({ month: 'numeric', day: 'numeric' }, 'month') : this.num(dt.month);
+          case 'LL':
             // like 01, doesn't seem to work
-            return useDateTimeFormatter
-              ? string({ month: "2-digit", day: "numeric" }, "month")
-              : this.num(dt.month, 2);
-          case "LLL":
+            return useDateTimeFormatter ? string({ month: '2-digit', day: 'numeric' }, 'month') : this.num(dt.month, 2);
+          case 'LLL':
             // like Jan
-            return month("short", true);
-          case "LLLL":
+            return month('short', true);
+          case 'LLLL':
             // like January
-            return month("long", true);
-          case "LLLLL":
+            return month('long', true);
+          case 'LLLLL':
             // like J
-            return month("narrow", true);
+            return month('narrow', true);
           // months - format
-          case "M":
+          case 'M':
             // like 1
-            return useDateTimeFormatter
-              ? string({ month: "numeric" }, "month")
-              : this.num(dt.month);
-          case "MM":
+            return useDateTimeFormatter ? string({ month: 'numeric' }, 'month') : this.num(dt.month);
+          case 'MM':
             // like 01
-            return useDateTimeFormatter
-              ? string({ month: "2-digit" }, "month")
-              : this.num(dt.month, 2);
-          case "MMM":
+            return useDateTimeFormatter ? string({ month: '2-digit' }, 'month') : this.num(dt.month, 2);
+          case 'MMM':
             // like Jan
-            return month("short", false);
-          case "MMMM":
+            return month('short', false);
+          case 'MMMM':
             // like January
-            return month("long", false);
-          case "MMMMM":
+            return month('long', false);
+          case 'MMMMM':
             // like J
-            return month("narrow", false);
+            return month('narrow', false);
           // years
-          case "y":
+          case 'y':
             // like 2014
-            return useDateTimeFormatter ? string({ year: "numeric" }, "year") : this.num(dt.year);
-          case "yy":
+            return useDateTimeFormatter ? string({ year: 'numeric' }, 'year') : this.num(dt.year);
+          case 'yy':
             // like 14
             return useDateTimeFormatter
-              ? string({ year: "2-digit" }, "year")
+              ? string({ year: '2-digit' }, 'year')
               : this.num(dt.year.toString().slice(-2), 2);
-          case "yyyy":
+          case 'yyyy':
             // like 0012
-            return useDateTimeFormatter
-              ? string({ year: "numeric" }, "year")
-              : this.num(dt.year, 4);
-          case "yyyyyy":
+            return useDateTimeFormatter ? string({ year: 'numeric' }, 'year') : this.num(dt.year, 4);
+          case 'yyyyyy':
             // like 000012
-            return useDateTimeFormatter
-              ? string({ year: "numeric" }, "year")
-              : this.num(dt.year, 6);
+            return useDateTimeFormatter ? string({ year: 'numeric' }, 'year') : this.num(dt.year, 6);
           // eras
-          case "G":
+          case 'G':
             // like AD
-            return era("short");
-          case "GG":
+            return era('short');
+          case 'GG':
             // like Anno Domini
-            return era("long");
-          case "GGGGG":
-            return era("narrow");
-          case "kk":
+            return era('long');
+          case 'GGGGG':
+            return era('narrow');
+          case 'kk':
             return this.num(dt.weekYear.toString().slice(-2), 2);
-          case "kkkk":
+          case 'kkkk':
             return this.num(dt.weekYear, 4);
-          case "W":
+          case 'W':
             return this.num(dt.weekNumber);
-          case "WW":
+          case 'WW':
             return this.num(dt.weekNumber, 2);
-          case "n":
+          case 'n':
             return this.num(dt.localWeekNumber);
-          case "nn":
+          case 'nn':
             return this.num(dt.localWeekNumber, 2);
-          case "ii":
+          case 'ii':
             return this.num(dt.localWeekYear.toString().slice(-2), 2);
-          case "iiii":
+          case 'iiii':
             return this.num(dt.localWeekYear, 4);
-          case "o":
+          case 'o':
             return this.num(dt.ordinal);
-          case "ooo":
+          case 'ooo':
             return this.num(dt.ordinal, 3);
-          case "q":
+          case 'q':
             // like 1
             return this.num(dt.quarter);
-          case "qq":
+          case 'qq':
             // like 01
             return this.num(dt.quarter, 2);
-          case "X":
+          case 'X':
             return this.num(Math.floor(dt.ts / 1000));
-          case "x":
+          case 'x':
             return this.num(dt.ts);
           default:
             return maybeMacro(token);
@@ -375,25 +357,25 @@ export default class Formatter {
   }
 
   formatDurationFromString(dur, fmt) {
-    const invertLargest = this.opts.signMode === "negativeLargestOnly" ? -1 : 1;
+    const invertLargest = this.opts.signMode === 'negativeLargestOnly' ? -1 : 1;
     const tokenToField = (token) => {
         switch (token[0]) {
-          case "S":
-            return "milliseconds";
-          case "s":
-            return "seconds";
-          case "m":
-            return "minutes";
-          case "h":
-            return "hours";
-          case "d":
-            return "days";
-          case "w":
-            return "weeks";
-          case "M":
-            return "months";
-          case "y":
-            return "years";
+          case 'S':
+            return 'milliseconds';
+          case 's':
+            return 'seconds';
+          case 'm':
+            return 'minutes';
+          case 'h':
+            return 'hours';
+          case 'd':
+            return 'days';
+          case 'w':
+            return 'weeks';
+          case 'M':
+            return 'months';
+          case 'y':
+            return 'years';
           default:
             return null;
         }
@@ -401,16 +383,15 @@ export default class Formatter {
       tokenToString = (lildur, info) => (token) => {
         const mapped = tokenToField(token);
         if (mapped) {
-          const inversionFactor =
-            info.isNegativeDuration && mapped !== info.largestUnit ? invertLargest : 1;
+          const inversionFactor = info.isNegativeDuration && mapped !== info.largestUnit ? invertLargest : 1;
           let signDisplay;
-          if (this.opts.signMode === "negativeLargestOnly" && mapped !== info.largestUnit) {
-            signDisplay = "never";
-          } else if (this.opts.signMode === "all") {
-            signDisplay = "always";
+          if (this.opts.signMode === 'negativeLargestOnly' && mapped !== info.largestUnit) {
+            signDisplay = 'never';
+          } else if (this.opts.signMode === 'all') {
+            signDisplay = 'always';
           } else {
             // "auto" and "negative" are the same, but "auto" has better support
-            signDisplay = "auto";
+            signDisplay = 'auto';
           }
           return this.num(lildur.get(mapped) * inversionFactor, token.length, signDisplay);
         } else {
@@ -418,10 +399,7 @@ export default class Formatter {
         }
       },
       tokens = Formatter.parseFormat(fmt),
-      realTokens = tokens.reduce(
-        (found, { literal, val }) => (literal ? found : found.concat(val)),
-        []
-      ),
+      realTokens = tokens.reduce((found, { literal, val }) => (literal ? found : found.concat(val)), []),
       collapsed = dur.shiftTo(...realTokens.map(tokenToField).filter((t) => t)),
       durationInfo = {
         isNegativeDuration: collapsed < 0,

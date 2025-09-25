@@ -2,6 +2,7 @@ class ObjectsImpl {
   keys<T extends object>(object: T): (keyof T)[] {
     return Object.keys(object) as (keyof T)[];
   }
+
   entries<T extends object>(
     object: T
   ): {
